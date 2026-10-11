@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TSALAT — توقيت الصّلاة</title>
+<meta name="description" content="TSALAT : horaires de prière de votre mosquée, sur téléphone et sur l'écran de la mosquée.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0b141c; --card:#15222d; --gold:#f2c75c; --label:#ddc091; --text:#e9e6e0; --dim:#8c8272; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Amiri, "Segoe UI", Tahoma, sans-serif; line-height:1.6; }
+  main { max-width:560px; margin:0 auto; padding:28px 16px 48px; }
+  h1 { margin:0; color:var(--gold); font-size:2.6rem; text-align:center; }
+  .sub { text-align:center; color:var(--label); font-size:1.25rem; margin:4px 0 24px; }
+  .card { background:var(--card); border-radius:18px; padding:20px; margin:16px 0; }
+  .btn { display:block; text-align:center; background:var(--gold); color:#000; font-weight:700; font-size:1.4rem;
+         padding:16px; border-radius:16px; text-decoration:none; }
+  .ver { text-align:center; color:var(--dim); margin-top:8px; font-size:.95rem; }
+  ol { margin:0; padding-inline-start:1.4em; font-size:1.1rem; }
+  li { margin:6px 0; }
+  h2 { color:var(--gold); font-size:1.3rem; margin:0 0 8px; }
+  .fr { direction:ltr; text-align:left; font-family:"Segoe UI", Tahoma, sans-serif; }
+  .fr h2 { font-family:inherit; }
+  footer { text-align:center; color:var(--dim); font-size:.85rem; margin-top:28px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>توقيت الصّلاة</h1>
+  <p class="sub">TSALAT · مواقيت الصلاة لمسجدك على الهاتف وعلى شاشة المسجد</p>
+
+  <a class="btn" id="dl" href="https://github.com/tsalatnet/tsalat-media/releases/download/app/tsalat.apk">⬇ تحميل التطبيق · Télécharger</a>
+  <p class="ver" id="ver">Android 6 أو أحدث · Android 6 ou plus récent</p>
+
+  <div class="card">
+    <h2>طريقة التثبيت</h2>
+    <ol>
+      <li>اضغط على «تحميل التطبيق» وانتظر انتهاء التحميل.</li>
+      <li>افتح الملف <b>tsalat.apk</b> من الإشعارات أو من مجلد التنزيلات.</li>
+      <li>إذا طُلب منك: اسمح بتثبيت التطبيقات من هذا المصدر، ثم «تثبيت».</li>
+    </ol>
+  </div>
+
+  <div class="card fr">
+    <h2>Installation</h2>
+    <ol>
+      <li>Touchez « Télécharger » et attendez la fin du téléchargement.</li>
+      <li>Ouvrez le fichier <b>tsalat.apk</b> (notification ou dossier Téléchargements).</li>
+      <li>Si Android le demande : autorisez l'installation depuis cette source, puis « Installer ».</li>
+    </ol>
+  </div>
+
+  <footer>TSALAT · tsalat.net@gmail.com</footer>
+</main>
+<script>
+  // Version shown under the button, from app/version.json (published with each APK).
+  fetch("app/version.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {
+    if (!v) return;
+    document.getElementById("ver").textContent = "الإصدار " + v.versionName + " · version " + v.versionName + " · " + v.date;
+    if (v.url) document.getElementById("dl").href = v.url;
+  }).catch(() => {});
+</script>
+</body>
+</html>
