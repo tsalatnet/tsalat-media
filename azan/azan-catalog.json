@@ -1,0 +1,775 @@
+{
+ "schemaVersion": "1.2",
+ "generatedAt": "2026-07-05",
+ "baseUrl": null,
+ "notes": {
+  "fr": "Catalogue des azans telechargeables. Champ 'prayerScope': 'fajr' signifie que le nom de fichier original indiquait explicitement un azan du Fajr (contenant normalement la phrase additionnelle « As-salatu khayrun min an-nawm »). 'general' signifie que ce marquage explicite est absent du nom de fichier ; ces fichiers sont utilisables pour Dhuhr/Asr/Maghreb/Icha/Joumoua, et peuvent aussi convenir au Fajr mais SANS certitude qu'ils contiennent la phrase specifique du Fajr (verification audio automatique impossible : la transcription vocale echoue sur le chant melismatique de l'azan, testee et abandonnee). Champ 'reciter.attribution' indique le niveau de confiance sur l'identite : 'named-public-figure' = personnalite verifiee par recherche web comme recitant/muezzin documente ayant reellement enregistre des azans ; 'place-style' = le nom de fichier designe un lieu/style regional plutot qu'une personne ; 'named-unverified' = un nom de personne figure dans le fichier mais aucune source publique independante n'a ete trouvee pour le confirmer (a verifier manuellement en ecoutant si necessaire).",
+  "howToFillBaseUrl": "Remplacer {{BASE_URL}} par l'URL brute GitHub, ex: https://raw.githubusercontent.com/<owner>/<repo>/<branch>/app/src/main/assets/spec/audio/azan une fois le depot choisi.",
+  "audioFormat": "Tous les fichiers .ogg utilisent le codec Opus (plus efficace que Vorbis/MP3 a bas debit pour la voix), compatible lecture HTML5 audio dans GeckoView/Firefox et navigateurs modernes.",
+  "hosting": "Chaque azan est heberge en tant que fichier committe dans le dossier audio/ de ce depot (https://github.com/TSALATPRAYER/azan), servi via raw.githubusercontent.com (CORS actif, contrairement aux assets de GitHub Release utilises precedemment qui bloquaient fetch()). Le champ 'downloadUrl' de chaque item pointe directement vers ce fichier brut.",
+  "groups": "Le catalogue est organise en deux blocs distincts via le tableau 'groups' : groups[0] (key='fajr') = azans du Fajr, groups[1] (key='general') = azans pour les autres prieres. Chaque groupe a un 'label' (titre a afficher pour le bloc dans l'application) et sa propre liste 'items'. Le champ 'prayerScope' est conserve sur chaque item par redondance/compatibilite mais l'application doit se baser sur l'appartenance au groupe pour l'affichage des deux blocs.",
+  "refresh_2026": "Catalogue rafraichi : reconversion de tous les OGG (qualite maximale sous contrainte de taille <= mp3 d'origine pour les fichiers < 1 Mo ; reduction de taille a 64 kbps CBR pour les fichiers >= 1 Mo, sans perte audible), ajout de 7 nouveaux azans, retrait de 'abdul-basit' et 'hafez' (fichiers sources absents du nouveau depot), et renommage de 'kods-fajr' -> 'azan-fajr-kods' / 'azan-kuwait-fajr' -> 'azan-fajr-kuwait' pour une convention de nommage uniforme des azans du Fajr.",
+  "requality_2026": "Les 19 azans issus de sources mp3 < 1 Mo ont ete reencodes une seconde fois en Opus VBR (64 kbps mono / 96 kbps stereo, application='audio', compression_level=10) pour ameliorer nettement la qualite audible, la contrainte de taille <= mp3 d'origine ayant ete levee a la demande de l'utilisateur (les fichiers ogg resultants sont donc desormais plus gros que les mp3 sources, ce qui est attendu et accepte)."
+ },
+ "groups": [
+  {
+   "key": "fajr",
+   "label": {
+    "fr": "Azan du Fajr",
+    "ar": "أذان الفجر",
+    "en": "Fajr Azan"
+   },
+   "description": {
+    "fr": "Azans marques explicitement pour le Fajr (contiennent normalement la phrase additionnelle « As-salatu khayrun min an-nawm »)."
+   },
+   "items": [
+    {
+     "id": "azan-fajr-kods",
+     "fileName": "azan_fajr_kods.ogg",
+     "sourceFileName": "azan_fajr_kods.mp3",
+     "displayName": {
+      "fr": "Azan Al-Qods (Fajr)",
+      "ar": "أذان القدس (الفجر)"
+     },
+     "prayerScope": "fajr",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style/lieu : mosquee Al-Aqsa / Al-Qods (Jerusalem). Marque explicitement 'FAJR' dans le nom de fichier fourni."
+     },
+     "language": "ar",
+     "durationSeconds": 245.9,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1986113,
+     "originalFileSizeBytes": 3933831,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-fajr-kods.ogg"
+    },
+    {
+     "id": "azan-fajr-kuwait",
+     "fileName": "azan_fajr_kuwait.ogg",
+     "sourceFileName": "azan_fajr_kuwait.mp3",
+     "displayName": {
+      "fr": "Azan du Koweit (Fajr)",
+      "ar": "أذان الكويت (الفجر)"
+     },
+     "prayerScope": "fajr",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style/lieu : Koweit. Marque explicitement 'fajr' dans le nom de fichier fourni."
+     },
+     "language": "ar",
+     "durationSeconds": 209.9,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1829970,
+     "originalFileSizeBytes": 483352,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-fajr-kuwait.ogg"
+    },
+    {
+     "id": "azan-fajr-barrak",
+     "fileName": "azan_fajr_barrak.ogg",
+     "sourceFileName": "azan_fajr_barrak.mp3",
+     "displayName": {
+      "fr": "Cheikh Mohammed Al-Barrak (Fajr)",
+      "ar": "الشيخ محمد البراق (الفجر)"
+     },
+     "prayerScope": "fajr",
+     "reciter": {
+      "name": "Mohammed Al-Barrak",
+      "attribution": "named-public-figure",
+      "note": "Qari koweitien reconnu (recitateur du Coran repertorie sur des plateformes specialisees, ex. mp3quran.net). Sa notoriete est principalement liee a la recitation coranique ; la paternite exacte de cet enregistrement d'azan n'a pas ete authentifiee par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 155.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1253293,
+     "originalFileSizeBytes": 4975501,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-fajr-barrak.ogg"
+    },
+    {
+     "id": "azan-fajr-islam-sobhi",
+     "fileName": "azan_fajr_islam_sobhi.ogg",
+     "sourceFileName": "azan_fajr_islam_sobhi.mp3",
+     "displayName": {
+      "fr": "Islam Sobhi (Fajr)",
+      "ar": "إسلام صبحي (الفجر)"
+     },
+     "prayerScope": "fajr",
+     "reciter": {
+      "name": "Islam Sobhi",
+      "attribution": "named-public-figure",
+      "note": "Recitateur egyptien contemporain ayant publiquement diffuse un enregistrement d'azan du Fajr sous son nom (YouTube, SoundCloud, Spotify). Correspondance avec ce fichier plausible mais non authentifiee par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 173.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1398045,
+     "originalFileSizeBytes": 2770054,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-fajr-islam-sobhi.ogg"
+    }
+   ]
+  },
+  {
+   "key": "general",
+   "label": {
+    "fr": "Azan (Dhuhr, Asr, Maghreb, Icha, Joumoua)",
+    "ar": "أذان (باقي الصلوات)",
+    "en": "Azan (other prayers)"
+   },
+   "description": {
+    "fr": "Azans standard, utilisables pour Dhuhr/Asr/Maghreb/Icha/Joumoua. Peuvent aussi etre choisis pour le Fajr mais sans certitude qu'ils contiennent la phrase specifique du Fajr."
+   },
+   "items": [
+    {
+     "id": "bilel-aghbari",
+     "fileName": "AZAN_BILEL_AGHBARI.ogg",
+     "sourceFileName": "AZAN_BILEL_AGHBARI.mp3",
+     "displayName": {
+      "fr": "Azan - Bilel Aghbari",
+      "ar": "أذان - بلال الغبري"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Bilel Aghbari",
+      "attribution": "named-unverified",
+      "note": "Nom repris tel quel du fichier fourni par l'utilisateur ; aucune source publique independante trouvee confirmant l'identite de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 252.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 2036051,
+     "originalFileSizeBytes": 4033350,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/bilel-aghbari.ogg"
+    },
+    {
+     "id": "abdul-ghaffar",
+     "fileName": "Abdul-Ghaffar.ogg",
+     "sourceFileName": "Abdul-Ghaffar.mp3",
+     "displayName": {
+      "fr": "Azan - Abdul Ghaffar",
+      "ar": "أذان - عبد الغفار"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Abdul Ghaffar",
+      "attribution": "named-unverified",
+      "note": "Nom repris du fichier fourni ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 186.3,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1710960,
+     "originalFileSizeBytes": 188551,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/abdul-ghaffar.ogg"
+    },
+    {
+     "id": "abdul-hakam",
+     "fileName": "Abdul-Hakam.ogg",
+     "sourceFileName": "Abdul-Hakam.mp3",
+     "displayName": {
+      "fr": "Azan - Abdul Hakam",
+      "ar": "أذان - عبد الحكم"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Abdul Hakam",
+      "attribution": "named-unverified",
+      "note": "Nom repris du fichier fourni ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 190.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1702810,
+     "originalFileSizeBytes": 192363,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/abdul-hakam.ogg"
+    },
+    {
+     "id": "adhan-alaqsa",
+     "fileName": "Adhan-Alaqsa.ogg",
+     "sourceFileName": "Adhan-Alaqsa.mp3",
+     "displayName": {
+      "fr": "Azan Al-Aqsa (Jerusalem)",
+      "ar": "أذان المسجد الأقصى"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style/lieu : mosquee Al-Aqsa, Jerusalem. Muezzin non identifiable a partir du nom de fichier."
+     },
+     "language": "ar",
+     "durationSeconds": 225.0,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1960120,
+     "originalFileSizeBytes": 227263,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/adhan-alaqsa.ogg"
+    },
+    {
+     "id": "adhan-egypt",
+     "fileName": "Adhan-Egypt.ogg",
+     "sourceFileName": "Adhan-Egypt.mp3",
+     "displayName": {
+      "fr": "Azan style egyptien",
+      "ar": "أذان مصري"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style regional (Egypte) generique ; muezzin non identifiable a partir du nom de fichier."
+     },
+     "language": "ar",
+     "durationSeconds": 182.7,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1593184,
+     "originalFileSizeBytes": 184996,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/adhan-egypt.ogg"
+    },
+    {
+     "id": "adhan-halab",
+     "fileName": "Adhan-Halab.ogg",
+     "sourceFileName": "Adhan-Halab.mp3",
+     "displayName": {
+      "fr": "Azan style d'Alep (Halab)",
+      "ar": "أذان حلبي"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style regional (Alep, Syrie) generique ; muezzin non identifiable a partir du nom de fichier."
+     },
+     "language": "ar",
+     "durationSeconds": 222.6,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1949134,
+     "originalFileSizeBytes": 224859,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/adhan-halab.ogg"
+    },
+    {
+     "id": "adhan-madinah",
+     "fileName": "Adhan-Madinah.ogg",
+     "sourceFileName": "Adhan-Madinah.mp3",
+     "displayName": {
+      "fr": "Azan de la Mosquee du Prophete (Medine)",
+      "ar": "أذان المسجد النبوي"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style/lieu : Al-Masjid an-Nabawi, Medine. Plusieurs muezzins s'y relaient (ex. Cheikh Faisal Nauman, en fonction ~2001-2025 ; Cheikh Muhammad Marwan Qassas) ; impossible de determiner lequel sans ecoute comparative."
+     },
+     "language": "ar",
+     "durationSeconds": 95.8,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 859207,
+     "originalFileSizeBytes": 98062,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/adhan-madinah.ogg"
+    },
+    {
+     "id": "adhan-makkah",
+     "fileName": "Adhan-Makkah.ogg",
+     "sourceFileName": "Adhan-Makkah.mp3",
+     "displayName": {
+      "fr": "Azan de la Grande Mosquee (La Mecque)",
+      "ar": "أذان المسجد الحرام"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Ali Ahmed Mulla (presume)",
+      "attribution": "named-public-figure",
+      "note": "Style/lieu : Masjid al-Haram, La Mecque. Ali Ahmed Mulla en est le muezzin le plus documente et diffuse (muezzin officiel depuis 1984, plus de 40 ans de service) ; ses enregistrements sont les plus largement partages en ligne sous ce nom de fichier, mais l'identite precise n'a pas ete confirmee par comparaison vocale directe avec ce fichier specifique."
+     },
+     "language": "ar",
+     "durationSeconds": 201.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1725373,
+     "originalFileSizeBytes": 203440,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/adhan-makkah.ogg"
+    },
+    {
+     "id": "al-hussaini",
+     "fileName": "Al-Hussaini.ogg",
+     "sourceFileName": "Al-Hussaini.mp3",
+     "displayName": {
+      "fr": "Azan - Al-Hussaini",
+      "ar": "أذان - الحسيني"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Al-Hussaini",
+      "attribution": "named-unverified",
+      "note": "Nom repris du fichier fourni ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 196.3,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1716290,
+     "originalFileSizeBytes": 198580,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/al-hussaini.ogg"
+    },
+    {
+     "id": "bakir-bash",
+     "fileName": "Bakir-Bash.ogg",
+     "sourceFileName": "Bakir-Bash.mp3",
+     "displayName": {
+      "fr": "Azan - Bakir Bash",
+      "ar": "أذان - بكر باش"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Bakir Bash",
+      "attribution": "named-unverified",
+      "note": "Possible graphie de 'Bekir Bas', nom porte par un muezzin turc reconnu pour son azan sur internet ; aucune source publique independante n'a pu confirmer ce rapprochement precis."
+     },
+     "language": "ar",
+     "durationSeconds": 347.3,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 3099693,
+     "originalFileSizeBytes": 349567,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/bakir-bash.ogg"
+    },
+    {
+     "id": "hafiz-murad",
+     "fileName": "Hafiz-Murad.ogg",
+     "sourceFileName": "Hafiz-Murad.mp3",
+     "displayName": {
+      "fr": "Azan - Hafiz Murad",
+      "ar": "أذان - حافظ مراد"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Hafiz Murad",
+      "attribution": "named-unverified",
+      "note": "Nom repris du fichier fourni ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 101.9,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 911154,
+     "originalFileSizeBytes": 104226,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/hafiz-murad.ogg"
+    },
+    {
+     "id": "minshawi",
+     "fileName": "Minshawi.ogg",
+     "sourceFileName": "Minshawi.mp3",
+     "displayName": {
+      "fr": "Cheikh Mohammed Siddiq Al-Minshawi",
+      "ar": "الشيخ محمد صديق المنشاوي"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Muhammad Siddiq Al-Minshawi",
+      "fullName": "Muhammad Siddiq Al-Minshawi (1920-1969)",
+      "attribution": "named-public-figure",
+      "note": "Qari egyptien legendaire, l'un des recitants coraniques les plus celebres au monde. Des enregistrements authentiques de son azan circulent publiquement en ligne. Le fichier fourni porte son nom mais n'a pas ete authentifie par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 235.0,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 2041475,
+     "originalFileSizeBytes": 237238,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/minshawi.ogg"
+    },
+    {
+     "id": "naghshbandi",
+     "fileName": "Naghshbandi.ogg",
+     "sourceFileName": "Naghshbandi.mp3",
+     "displayName": {
+      "fr": "Azan - Naghshbandi",
+      "ar": "أذان - النقشبندي"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Naghshbandi",
+      "attribution": "named-unverified",
+      "note": "Ce patronyme est associe a l'ordre soufi Naqshbandi ; peut correspondre au patronyme du recitant, mais aucune source publique independante n'a pu confirmer une identite precise."
+     },
+     "language": "ar",
+     "durationSeconds": 162.3,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1492031,
+     "originalFileSizeBytes": 164568,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/naghshbandi.ogg"
+    },
+    {
+     "id": "saber",
+     "fileName": "Saber.ogg",
+     "sourceFileName": "Saber.mp3",
+     "displayName": {
+      "fr": "Azan - Saber",
+      "ar": "أذان - صابر"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Saber",
+      "attribution": "named-unverified",
+      "note": "Nom repris du fichier fourni ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 149.0,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1275741,
+     "originalFileSizeBytes": 151240,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/saber.ogg"
+    },
+    {
+     "id": "sharif-doman",
+     "fileName": "Sharif-Doman.ogg",
+     "sourceFileName": "Sharif-Doman.mp3",
+     "displayName": {
+      "fr": "Azan - Sharif Doman",
+      "ar": "أذان - شريف دومان"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Sharif Doman",
+      "attribution": "named-unverified",
+      "note": "Nom repris du fichier fourni ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 280.9,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 2429671,
+     "originalFileSizeBytes": 283218,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/sharif-doman.ogg"
+    },
+    {
+     "id": "yusuf-islam",
+     "fileName": "Yusuf-Islam.ogg",
+     "sourceFileName": "Yusuf-Islam.mp3",
+     "displayName": {
+      "fr": "Azan - Yusuf Islam",
+      "ar": "أذان - يوسف الإسلام"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Yusuf Islam",
+      "attribution": "named-unverified",
+      "note": "A NE PAS CONFONDRE avec le chanteur britannique converti Yusuf Islam (Cat Stevens), qui n'est pas connu pour des enregistrements d'azan : il s'agit tres probablement d'un homonyme arabe courant. Aucune source publique independante trouvee pour confirmer l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 98.8,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 895974,
+     "originalFileSizeBytes": 101091,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/yusuf-islam.ogg"
+    },
+    {
+     "id": "azan-chahhat",
+     "fileName": "azan_chahhat.ogg",
+     "sourceFileName": "azan_chahhat.mp3",
+     "displayName": {
+      "fr": "Azan - Chahhat",
+      "ar": "أذان - شحاط"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Chahhat",
+      "attribution": "named-unverified",
+      "note": "Patronyme probablement maghrebin (tunisien/algerien) ; aucune source publique independante trouvee confirmant l'identite exacte de ce recitant."
+     },
+     "language": "ar",
+     "durationSeconds": 222.7,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1799353,
+     "originalFileSizeBytes": 3603556,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-chahhat.ogg"
+    },
+    {
+     "id": "azan-kods",
+     "fileName": "azan_kods.ogg",
+     "sourceFileName": "azan_kods.mp3",
+     "displayName": {
+      "fr": "Azan Al-Qods",
+      "ar": "أذان القدس"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": null,
+      "attribution": "place-style",
+      "note": "Style/lieu : Al-Qods (Jerusalem). Muezzin non identifiable a partir du nom de fichier. Le fichier source contenait une image de couverture integree (ignoree lors de la conversion audio)."
+     },
+     "language": "ar",
+     "durationSeconds": 182.2,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1596623,
+     "originalFileSizeBytes": 428038,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-kods.ogg"
+    },
+    {
+     "id": "azan-barrak",
+     "fileName": "AZAN_BARRAK.ogg",
+     "sourceFileName": "AZAN_BARRAK.mp3",
+     "displayName": {
+      "fr": "Cheikh Mohammed Al-Barrak",
+      "ar": "الشيخ محمد البراق"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Mohammed Al-Barrak",
+      "attribution": "named-public-figure",
+      "note": "Qari koweitien reconnu (recitateur du Coran repertorie sur des plateformes specialisees, ex. mp3quran.net). Sa notoriete est principalement liee a la recitation coranique ; la paternite exacte de cet enregistrement d'azan n'a pas ete authentifiee par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 123.7,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 999559,
+     "originalFileSizeBytes": 3975182,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-barrak.ogg"
+    },
+    {
+     "id": "azan-abdelbasset-1",
+     "fileName": "azan_abdelbasset_1.ogg",
+     "sourceFileName": "azan_abdelbasset_1.mp3",
+     "displayName": {
+      "fr": "Cheikh Abdul Basit Abdul Samad (1)",
+      "ar": "الشيخ عبد الباسط عبد الصمد (1)"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Abdul Basit Abdul Samad",
+      "fullName": "Abdul Basit Muhammad Abdul Samad (1927-1988)",
+      "attribution": "named-public-figure",
+      "note": "Qari egyptien mondialement celebre, triple champion des concours de recitation coranique (annees 1970). Des enregistrements authentiques de son azan circulent publiquement en ligne. Ce fichier est l'un de plusieurs enregistrements distincts attribues a son nom dans ce lot ; il n'a pas ete authentifie par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 247.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 1,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 2309150,
+     "originalFileSizeBytes": 494336,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-abdelbasset-1.ogg"
+    },
+    {
+     "id": "azan-abdelbasset-2",
+     "fileName": "azan_abdelbasset_2.ogg",
+     "sourceFileName": "azan_abdelbasset_2.mp3",
+     "displayName": {
+      "fr": "Cheikh Abdul Basit Abdul Samad (2)",
+      "ar": "الشيخ عبد الباسط عبد الصمد (2)"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Abdul Basit Abdul Samad",
+      "fullName": "Abdul Basit Muhammad Abdul Samad (1927-1988)",
+      "attribution": "named-public-figure",
+      "note": "Qari egyptien mondialement celebre, triple champion des concours de recitation coranique (annees 1970). Des enregistrements authentiques de son azan circulent publiquement en ligne. Ce fichier est l'un de plusieurs enregistrements distincts attribues a son nom dans ce lot ; il n'a pas ete authentifie par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 187.1,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1512246,
+     "originalFileSizeBytes": 4555628,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-abdelbasset-2.ogg"
+    },
+    {
+     "id": "azan-abdelbasset-3",
+     "fileName": "azan_abdelbasset_3.ogg",
+     "sourceFileName": "azan_abdelbasset_3.mp3",
+     "displayName": {
+      "fr": "Cheikh Abdul Basit Abdul Samad (3)",
+      "ar": "الشيخ عبد الباسط عبد الصمد (3)"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Abdul Basit Abdul Samad",
+      "fullName": "Abdul Basit Muhammad Abdul Samad (1927-1988)",
+      "attribution": "named-public-figure",
+      "note": "Qari egyptien mondialement celebre, triple champion des concours de recitation coranique (annees 1970). Des enregistrements authentiques de son azan circulent publiquement en ligne. Ce fichier est l'un de plusieurs enregistrements distincts attribues a son nom dans ce lot ; il n'a pas ete authentifie par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 191.9,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "CBR",
+      "bitrateKbps": 64
+     },
+     "fileSizeBytes": 1550116,
+     "originalFileSizeBytes": 3070790,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-abdelbasset-3.ogg"
+    },
+    {
+     "id": "azan-doukali",
+     "fileName": "azan_doukali.ogg",
+     "sourceFileName": "azan_doukali.mp3",
+     "displayName": {
+      "fr": "Cheikh Mohammed Al-Alam Al-Doukali (Libye)",
+      "ar": "الشيخ محمد العالم الدوكالي"
+     },
+     "prayerScope": "general",
+     "reciter": {
+      "name": "Mohammed Al-Alam Al-Doukali",
+      "attribution": "named-public-figure",
+      "note": "Recitateur libyen tres populaire ; ses enregistrements de recitation coranique et d'azan circulent publiquement et sont particulierement apprecies par les Libyens. Correspondance avec ce fichier plausible mais non authentifiee par comparaison vocale directe."
+     },
+     "language": "ar",
+     "durationSeconds": 130.0,
+     "audio": {
+      "codec": "opus",
+      "container": "ogg",
+      "channels": 2,
+      "bitrateMode": "VBR",
+      "bitrateKbps": 96
+     },
+     "fileSizeBytes": 1664343,
+     "originalFileSizeBytes": 1044857,
+     "downloadUrl": "https://tsalatnet.github.io/tsalat-media/azan/audio/azan-doukali.ogg"
+    }
+   ]
+  }
+ ]
+}
