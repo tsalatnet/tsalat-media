@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>اقتراح مسجد جديد — TSALAT</title>
+<meta name="description" content="TSALAT : demander l'ajout de votre mosquée dans l'application des horaires de prière.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<!-- Source: TSALAT repo web/mosque/index.html, published to tsalat-media by tools/build_mosque_page.py
+     (with locations.json and times/<code>.txt). Same 3 steps as the app's NewMosqueScreen. -->
+<style>
+  :root { --bg:#0b141c; --card:#15222d; --field:#0f1a23; --gold:#f2c75c; --label:#ddc091; --text:#e9e6e0;
+          --dim:#8c8272; --ok:#5fbf77; --err:#e0584f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Amiri, "Segoe UI", Tahoma, sans-serif; line-height:1.6; }
+  main { max-width:560px; margin:0 auto; padding:28px 16px 48px; }
+  h1 { margin:0; color:var(--gold); font-size:2.2rem; text-align:center; }
+  .sub { text-align:center; color:var(--label); font-size:1.15rem; margin:4px 0 20px; }
+  .card { background:var(--card); border-radius:18px; padding:18px 18px 8px; margin:14px 0; }
+  label, .lbl { display:block; color:var(--label); font-weight:700; font-size:1.15rem; margin-bottom:6px; }
+  .fr { color:var(--dim); font-weight:400; font-size:.9rem; margin-inline-start:6px; }
+  .hint { color:var(--dim); font-size:.9rem; margin:-4px 0 10px; }
+  .row { margin-bottom:16px; }
+  input, textarea { width:100%; background:var(--field); color:var(--text); border:1px solid #f2c75c40;
+          border-radius:12px; padding:12px 14px; font:inherit; font-size:1.1rem; }
+  input:focus, textarea:focus { outline:2px solid var(--gold); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 12px; }
+  .chip { background:#ffffff1a; color:var(--label); border:0; border-radius:20px; padding:8px 14px; font:inherit;
+          font-size:1rem; font-weight:700; cursor:pointer; }
+  .chip.on { background:var(--gold); color:#000; }
+  .btn { display:block; width:100%; text-align:center; background:var(--gold); color:#000; font-weight:700;
+         font-size:1.35rem; padding:14px; border:0; border-radius:16px; font-family:inherit; cursor:pointer; margin-top:10px; }
+  .btn2 { background:#f2c75c26; color:var(--label); font-size:1.1rem; padding:12px; }
+  .btn:disabled { opacity:.6; }
+  .chosen { color:var(--ok); font-weight:700; margin:0 0 12px; }
+  #msg { color:var(--err); text-align:center; min-height:1.6em; margin:10px 0 0; }
+  .done { text-align:center; padding:24px 18px; }
+  .done .big { font-size:3.5rem; color:var(--ok); line-height:1; }
+  .done h2 { color:var(--gold); margin:10px 0; }
+  footer { text-align:center; color:var(--dim); margin-top:28px; font-size:.95rem; }
+  a { color:var(--gold); }
+  /* Step bar */
+  .steps { display:flex; gap:8px; margin:6px 0 4px; }
+  .steps div { flex:1; text-align:center; color:var(--dim); font-size:1rem; }
+  .steps div::before { content:""; display:block; height:6px; border-radius:3px; background:#ffffff22; margin-bottom:6px; }
+  .steps div.past { color:var(--label); }
+  .steps div.past::before, .steps div.now::before { background:var(--gold); }
+  .steps div.now { color:var(--gold); font-weight:700; }
+  /* Times */
+  .pr { border-top:1px solid #ffffff12; padding:10px 0 2px; }
+  .pr:first-of-type { border-top:0; }
+  .prh { display:flex; align-items:baseline; gap:10px; }
+  .prh b { flex:1; color:var(--label); font-size:1.2rem; }
+  .az { color:var(--dim); font-family:"Times New Roman", serif; }
+  .iq { color:var(--ok); font-weight:700; }
+  .stepper { display:flex; align-items:center; justify-content:center; gap:16px; margin:2px 0 10px; }
+  .stepper button { background:#f2c75c26; color:var(--label); border:0; border-radius:14px; font:inherit; font-weight:700;
+                    font-size:1.1rem; padding:8px 16px; cursor:pointer; }
+  .stepper span { font-family:"Times New Roman", serif; font-size:1.8rem; color:var(--text); min-width:4.2ch; text-align:center; }
+  .sum { display:grid; grid-template-columns:40% 60%; gap:4px 8px; margin-bottom:10px; }
+  .sum span:nth-child(odd) { color:var(--dim); }
+  .sum span:nth-child(even) { color:var(--label); }
+</style>
+</head>
+<body>
+<main>
+  <h1>🕌 اقتراح مسجد جديد</h1>
+  <p class="sub">مسجدك غير موجود في TSALAT؟ املأ الطلب، ويُضاف بعد المراجعة.<br>
+    <span class="fr">Votre mosquée n'est pas dans TSALAT ? Remplissez la demande, elle sera ajoutée après vérification.</span></p>
+
+  <form id="f" novalidate>
+    <div class="steps" id="steps">
+      <div>1. المسجد<br><span class="fr">Mosquée</span></div>
+      <div>2. الأوقات<br><span class="fr">Horaires</span></div>
+      <div>3. الإرسال<br><span class="fr">Envoi</span></div>
+    </div>
+
+    <!-- Step 1: the mosque -->
+    <section data-step="0">
+      <div class="card">
+        <div class="row"><label for="name">اسم المسجد *<span class="fr">Nom</span></label>
+          <input id="name" maxlength="120" placeholder="جامع …" required></div>
+        <div class="row"><label for="latin">الاسم بالحروف اللاتينية<span class="fr">Nom en lettres latines</span></label>
+          <input id="latin" maxlength="120" placeholder="Jamaa …" dir="ltr">
+          <p class="hint">اختياري — Facultatif</p></div>
+        <div class="row"><label for="city">المدينة *<span class="fr">Ville</span></label>
+          <input id="city" maxlength="80" required></div>
+        <div class="row"><span class="lbl">البلد<span class="fr">Pays</span></span>
+          <div class="chips" id="countries"></div></div>
+      </div>
+      <div class="card">
+        <span class="lbl">جدول المواقيت *<span class="fr">Table des horaires (ville)</span></span>
+        <button type="button" class="btn btn2" id="geo">📍 استعمال موقعي الحالي · Ma position</button>
+        <div id="nearBox" hidden><p class="hint" style="margin-top:10px">الأقرب إلى موقعك · Les plus proches</p><div class="chips" id="near"></div></div>
+        <div class="row" style="margin-top:12px"><input id="search" placeholder="ابحث: ksar hellal, paris…" dir="ltr" autocomplete="off"></div>
+        <div class="chips" id="hits"></div>
+        <p class="chosen" id="chosen"></p>
+      </div>
+      <button type="button" class="btn" data-next>التالي · Suivant</button>
+    </section>
+
+    <!-- Step 2: iqama + Jumu'a over today's real azan of the chosen table -->
+    <section data-step="1" hidden>
+      <div class="card">
+        <span class="lbl">الإقامة<span class="fr">Iqama</span></span>
+        <p class="hint" id="azanNote"></p>
+        <div id="prayers"></div>
+      </div>
+      <div class="card">
+        <span class="lbl">صلاة الجمعة<span class="fr">Joumoua</span></span>
+        <div class="chips" id="jHeld"></div>
+        <div id="jBox">
+          <div class="chips" id="jMode"></div>
+          <div id="jTime"></div>
+          <div class="chips" id="jSessions"></div>
+          <div id="jTime2"></div>
+        </div>
+      </div>
+      <button type="button" class="btn" data-next>التالي · Suivant</button>
+      <button type="button" class="btn btn2" id="skip">تخطّي — سأضبطها لاحقًا · Passer, je réglerai plus tard</button>
+    </section>
+
+    <!-- Step 3: contact + summary -->
+    <section data-step="2" hidden>
+      <div class="card">
+        <div class="row"><label for="contact">هاتفك أو بريدك *<span class="fr">Votre téléphone ou e-mail</span></label>
+          <input id="contact" maxlength="120" dir="ltr" required>
+          <p class="hint">للتواصل معك عند المراجعة فقط، لا يُنشر · Uniquement pour vous recontacter, jamais publié</p></div>
+        <div class="row"><label for="pin">رمز PIN للإدارة<span class="fr">Code PIN d'administration</span></label>
+          <input id="pin" inputmode="numeric" maxlength="12" dir="ltr" type="password" autocomplete="new-password">
+          <p class="hint">اختياري — 4 أرقام أو أكثر · Facultatif, 4 chiffres ou plus</p></div>
+        <div class="row"><label for="note">ملاحظة<span class="fr">Remarque</span></label>
+          <textarea id="note" rows="3" maxlength="500"></textarea></div>
+      </div>
+      <div class="card">
+        <span class="lbl">ملخّص الطلب<span class="fr">Récapitulatif</span></span>
+        <div class="sum" id="sum"></div>
+      </div>
+      <button class="btn" id="send" type="submit">إرسال الطلب · Envoyer</button>
+    </section>
+
+    <p id="msg"></p>
+    <button type="button" class="btn btn2" id="back" hidden>→ رجوع · Retour</button>
+  </form>
+
+  <div class="card done" id="done" hidden>
+    <div class="big">✓</div>
+    <h2 id="doneTitle">تم إرسال الطلب</h2>
+    <p>سيظهر المسجد في التطبيق بعد مراجعته.<br><span class="fr">La mosquée apparaîtra dans l'application après vérification.</span></p>
+    <p><a href="../">⬇ تحميل التطبيق · Télécharger l'application</a></p>
+  </div>
+
+  <footer>TSALAT · tsalat.net@gmail.com</footer>
+</main>
+<script>
+  // Same server function as the app's form (tsalat_mosque_request, public key = the app's).
+  const SB = "https://xecnhwgdymydmbhwzhaj.supabase.co";
+  const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
+  const $ = id => document.getElementById(id);
+  const state = { step: 0, country: "TN", code: null, lat: null, lon: null, near: null, azan: null, skipped: false };
+  // Step 2 (same defaults as the app: iqama +10, Jumu'a held at Dhuhr time). Minutes of the day.
+  const PRAYERS = [["fajr", "الفجر", 0], ["dhuhr", "الظهر", 2], ["asr", "العصر", 3], ["maghrib", "المغرب", 4], ["isha", "العشاء", 5]];
+  const DELAYS = [5, 10, 15, 20, 30];
+  const t = { delay: {}, fixed: {}, held: true, jumua: null, jumua2: null };
+  PRAYERS.forEach(([k]) => t.delay[k] = 10);
+  let codes = [];
+
+  async function rpc(fn, body) {
+    const r = await fetch(`${SB}/rest/v1/rpc/${fn}`, {
+      method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+
+  // "+10" stays "+10" inside Arabic text (an LTR isolate), never "10+".
+  const ltr = x => "⁦" + x + "⁩";
+  const hm = m => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+  const round5 = m => Math.ceil(m / 5) * 5 % 1440;
+
+  // "tn.ksar-hellal" → "Ksar Hellal (TN)"; "-18" variants keep their angle.
+  function label(code) {
+    const [cc, slug = ""] = code.split(/\.(.*)/s);
+    const v = slug.match(/-(\d+)$/);
+    const city = slug.replace(/-\d+$/, "").split(/[-_]/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+    return `${city}${v ? " " + v[1] + "°" : ""} (${cc.toUpperCase()})`;
+  }
+
+  function chips(el, options, selected, onPick) {
+    el.replaceChildren(...options.map(([key, text]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip" + (key === selected ? " on" : ""); b.textContent = text;
+      b.onclick = () => onPick(key);
+      return b;
+    }));
+  }
+  function stepper(el, value, onChange) {
+    if (value == null) { el.replaceChildren(); return; }
+    const plus = document.createElement("button"), minus = document.createElement("button"), v = document.createElement("span");
+    plus.type = minus.type = "button"; plus.textContent = ltr("+5"); minus.textContent = ltr("−5"); v.textContent = hm(value);
+    plus.onclick = () => onChange((value + 5) % 1440); minus.onclick = () => onChange((value + 1435) % 1440);
+    const box = document.createElement("div"); box.className = "stepper"; box.append(plus, v, minus);
+    el.replaceChildren(box);
+  }
+
+  // ── Step 1 ──
+  function renderCountries() {
+    chips($("countries"), [["TN", "تونس"], ["FR", "فرنسا"], ["BE", "بلجيكا"], ["SA", "السعودية"]], state.country,
+      k => { state.country = k; renderCountries(); });
+  }
+  function pick(code) {
+    state.code = code; state.azan = null;
+    $("chosen").textContent = "✓ " + label(code);
+    const cc = code.split(".")[0].toUpperCase();
+    if (["TN", "FR", "BE", "SA"].includes(cc)) { state.country = cc; renderCountries(); }
+    renderHits(); if (state.near) renderNear();
+    loadAzan(code);
+  }
+  function renderHits() {
+    const q = $("search").value.trim().toLowerCase().replace(/\s+/g, "-");
+    if (q.length < 2) { $("hits").replaceChildren(); return; }
+    const hits = codes.filter(c => c.includes(q)).slice(0, 10);
+    if (!hits.length) { $("hits").textContent = "لا توجد مدينة بهذا الاسم · Aucune ville"; return; }
+    chips($("hits"), hits.map(c => [c, label(c)]), state.code, pick);
+  }
+  function renderNear() {
+    chips($("near"), state.near.map(n => [n.location_code, `${label(n.location_code)} · ${Math.round(n.km)} كم`]), state.code, pick);
+  }
+  // Today's line of the times table ("MM-DD~~~~~fajr|shuruq|dhuhr|asr|maghrib|isha"): the azan the new
+  // mosque will show with the app defaults.
+  async function loadAzan(code) {
+    try {
+      const txt = await (await fetch(`times/${code}.txt`)).text();
+      const d = new Date(), key = String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const line = txt.split("\n").find(l => l.startsWith(key + "~"));
+      if (line && state.code === code) {
+        state.azan = line.replace(/^[^~]+~+/, "").trim().split("|").map(s => { const [h, m] = s.split(":"); return +h * 60 + +m; });
+        if (state.step === 1) renderTimes();
+      }
+    } catch (e) { /* step 2 works without the preview */ }
+  }
+
+  $("search").addEventListener("input", renderHits);
+  $("geo").onclick = () => {
+    if (!navigator.geolocation) { $("msg").textContent = "الموقع غير متاح في هذا المتصفح"; return; }
+    $("geo").textContent = "📍 …";
+    navigator.geolocation.getCurrentPosition(async p => {
+      state.lat = p.coords.latitude; state.lon = p.coords.longitude;
+      $("geo").textContent = `📍 ${state.lat.toFixed(4)}، ${state.lon.toFixed(4)}`;
+      try {
+        const list = (await rpc("tsalat_locations_near", { p_lat: state.lat, p_lon: state.lon }))
+          .filter(n => codes.includes((n.location_code || "").replace(/_+$/, "")))
+          .map(n => ({ ...n, location_code: n.location_code.replace(/_+$/, "") }))
+          .sort((a, b) => a.km - b.km).slice(0, 5);
+        state.near = list;
+        $("nearBox").hidden = !list.length;
+        if (list.length) { renderNear(); if (!state.code) pick(list[0].location_code); }
+      } catch (e) { /* the search still works */ }
+    }, () => { $("geo").textContent = "📍 استعمال موقعي الحالي · Ma position"; $("msg").textContent = "تعذّر تحديد الموقع · Position indisponible"; },
+    { enableHighAccuracy: true, timeout: 15000 });
+  };
+
+  // ── Step 2 ──
+  function renderTimes() {
+    const az = state.azan;
+    $("azanNote").textContent = az ? `أذان اليوم حسب جدول ${label(state.code)} · Azan d'aujourd'hui`
+      : "اختر لكل صلاة: بعد الأذان بدقائق، أو ساعة ثابتة · Minutes après l'azan, ou heure fixe";
+    $("prayers").replaceChildren(...PRAYERS.map(([k, name, i]) => {
+      const box = document.createElement("div"); box.className = "pr";
+      const a = az ? az[i] : null, fixed = t.fixed[k], iq = fixed ?? (a != null ? a + t.delay[k] : null);
+      box.innerHTML = `<div class="prh"><b>${name}</b>${a != null ? `<span class="az">الأذان ${hm(a)}</span>` : ""}` +
+        `${iq != null ? `<span class="iq">الإقامة ${hm(iq)}</span>` : ""}</div><div class="chips"></div><div></div>`;
+      chips(box.children[1], [...DELAYS.map(d => ["d" + d, ltr("+" + d)]), ["fixed", "ساعة · " + ltr("heure")]],
+        fixed != null ? "fixed" : "d" + t.delay[k], key => {
+          if (key === "fixed") t.fixed[k] = fixed ?? round5((a ?? 720) + t.delay[k]);
+          else { delete t.fixed[k]; t.delay[k] = +key.slice(1); }
+          renderTimes();
+        });
+      stepper(box.children[2], fixed, v => { t.fixed[k] = v; renderTimes(); });
+      return box;
+    }));
+    const dhuhr = az ? az[2] : null, base = t.jumua ?? round5(dhuhr ?? 780);
+    chips($("jHeld"), [["yes", "تُقام · " + ltr("oui")], ["no", "لا تُقام · " + ltr("non")]], t.held ? "yes" : "no", k => { t.held = k === "yes"; renderTimes(); });
+    $("jBox").hidden = !t.held;
+    chips($("jMode"), [["auto", "حسب الظهر" + (dhuhr != null ? ` ${ltr(hm(dhuhr))}` : "") + " · " + ltr("= Dhuhr")], ["fixed", "ساعة محددة · " + ltr("heure fixe")]],
+      t.jumua == null ? "auto" : "fixed", k => { t.jumua = k === "auto" ? null : base; renderTimes(); });
+    stepper($("jTime"), t.jumua, v => { t.jumua = v; renderTimes(); });
+    chips($("jSessions"), [["one", "حصة واحدة · " + ltr("1 séance")], ["two", "حصتان · " + ltr("2 séances")]], t.jumua2 == null ? "one" : "two",
+      k => { t.jumua2 = k === "one" ? null : (t.jumua2 ?? (base + 60) % 1440); renderTimes(); });
+    stepper($("jTime2"), t.jumua2, v => { t.jumua2 = v; renderTimes(); });
+  }
+  function timesJson() {
+    if (state.skipped) return null;
+    const delay = {}, fixed = {};
+    PRAYERS.forEach(([k]) => { if (t.fixed[k] != null) fixed[k] = hm(t.fixed[k]); else delay[k] = t.delay[k]; });
+    const jumua = { show_on_hr_screen: t.held ? 1 : 0 };
+    if (t.held) { jumua.time = t.jumua == null ? "AUTO" : hm(t.jumua); if (t.jumua2 != null) jumua.time2 = hm(t.jumua2); }
+    return { iqama_delay: delay, iqama_fixed: fixed, jumua };
+  }
+
+  // ── Step 3 ──
+  function renderSummary() {
+    const rows = [["المسجد", $("name").value.trim()], ["المدينة", `${$("city").value.trim()} · ${label(state.code)}`]];
+    if (state.skipped) rows.push(["الأوقات", "الإعدادات الافتراضية (تُضبط لاحقًا)"]);
+    else {
+      PRAYERS.forEach(([k, name, i]) => rows.push(["إقامة " + name, t.fixed[k] != null ? hm(t.fixed[k])
+        : ltr(`+${t.delay[k]}`) + " د" + (state.azan ? ` (${hm(state.azan[i] + t.delay[k])})` : "")]));
+      rows.push(["الجمعة", !t.held ? "لا تُقام" : (t.jumua == null ? "حسب الظهر" : hm(t.jumua)) + (t.jumua2 != null ? " · " + hm(t.jumua2) : "")]);
+    }
+    $("sum").replaceChildren(...rows.flatMap(([a, b]) => [a, b].map(x => { const s = document.createElement("span"); s.textContent = x; return s; })));
+  }
+
+  // ── Steps ──
+  function go(step) {
+    state.step = step; $("msg").textContent = "";
+    document.querySelectorAll("section[data-step]").forEach(s => s.hidden = +s.dataset.step !== step);
+    [...$("steps").children].forEach((d, i) => d.className = i < step ? "past" : i === step ? "now" : "");
+    $("back").hidden = step === 0;
+    if (step === 1) renderTimes();
+    if (step === 2) renderSummary();
+    scrollTo(0, 0);
+  }
+  const v = id => $(id).value.trim();
+  document.querySelectorAll("[data-next]").forEach(b => b.onclick = () => {
+    if (state.step === 0) {
+      const err = v("name").length < 2 ? "اكتب اسم المسجد · Nom de la mosquée" :
+        !v("city") ? "اكتب المدينة · Ville" : !state.code ? "اختر جدول المواقيت · Choisissez la ville des horaires" : "";
+      $("msg").textContent = err;
+      if (!err) go(1);
+    } else { state.skipped = false; go(2); }
+  });
+  $("skip").onclick = () => { state.skipped = true; go(2); };
+  $("back").onclick = () => go(state.step - 1);
+
+  $("f").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    if (state.step !== 2) return;
+    const pin = v("pin");
+    const err = v("contact").length < 4 ? "اكتب هاتفك أو بريدك · Téléphone ou e-mail" :
+      (pin && !/^\d{4,12}$/.test(pin)) ? "رمز PIN: 4 أرقام على الأقل · PIN : 4 chiffres minimum" : "";
+    $("msg").textContent = err;
+    if (err) return;
+    $("send").disabled = true; $("send").textContent = "…";
+    try {
+      const p = {
+        name: v("name"), name_latin: v("latin"), city: v("city"), country: state.country, location_code: state.code,
+        lat: state.lat, lon: state.lon, contact: v("contact"), pin, note: v("note"), source: "web",
+      };
+      const times = timesJson();
+      if (times) p.times = times;
+      const r = await rpc("tsalat_mosque_request", { p });
+      if (r.result === "ok" || r.result === "exists") {
+        if (r.result === "exists") $("doneTitle").textContent = "هذا الطلب مُرسَل من قبل · Demande déjà envoyée";
+        $("f").hidden = true; $("done").hidden = false; scrollTo(0, 0);
+        return;
+      }
+      $("msg").textContent = r.result === "too_many" ? "طلبات كثيرة الآن — أعد المحاولة بعد قليل · Réessayez plus tard"
+        : r.result === "bad_input" ? "تحقق من الحقول · Vérifiez les champs (" + (r.field || "") + ")" : "تعذّر الإرسال · Échec (" + r.result + ")";
+    } catch (e) {
+      $("msg").textContent = "تعذّر الاتصال بالخادم · Serveur injoignable";
+    }
+    $("send").disabled = false; $("send").textContent = "إرسال الطلب · Envoyer";
+  });
+
+  renderCountries(); go(0);
+  fetch("locations.json").then(r => r.json()).then(list => { codes = list; renderHits(); }).catch(() => {});
+</script>
+</body>
+</html>
