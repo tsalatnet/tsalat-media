@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ختمة جماعية · Khatma collective</title>
+<meta name="description" content="نقرأ معًا… ونختم القرآن معًا — Lisons ensemble… et terminons le Coran ensemble">
+<meta property="og:title" content="ختمة جماعية · Khatma collective">
+<meta property="og:description" content="حمّل التطبيق وانضمّ إلى الختمة الجماعية · Téléchargez l'application et rejoignez la khatma">
+<style>
+  :root { --green:#0E5C46; --green2:#1A8062; --gold:#D4AF37; --cream:#F8F1E3; --ink:#1C2420; --muted:#5b645f; --card:#fffcf5; }
+  @media (prefers-color-scheme: dark) { :root { --cream:#0F1714; --ink:#E2E8E4; --muted:#aab4ae; --card:#16201C; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--cream); color:var(--ink); font-family: "Amiri", "Segoe UI", Tahoma, sans-serif; }
+  header { background:linear-gradient(160deg,var(--green),var(--green2)); color:#fff; text-align:center;
+           padding:36px 16px 44px; border-radius:0 0 32px 32px; }
+  .logo { width:96px; height:96px; }
+  h1 { margin:8px 0 4px; font-size:32px; }
+  .sub { opacity:.85; margin:0; }
+  main { max-width:520px; margin:-24px auto 32px; padding:0 16px; }
+  .card { background:var(--card); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 2px 10px rgba(0,0,0,.08); }
+  .btn { display:block; text-align:center; text-decoration:none; font-size:20px; font-weight:bold; padding:16px; border-radius:18px; }
+  .gold { background:var(--gold); color:#2a2200; }
+  .green { background:var(--green); color:#fff; margin-top:10px; }
+  .code { font: bold 34px/1.2 monospace; letter-spacing:4px; color:var(--green); text-align:center; direction:ltr; }
+  ol { padding-inline-start:22px; line-height:1.9; margin:8px 0 0; }
+  .fr { direction:ltr; text-align:left; font-family:"Segoe UI", Roboto, sans-serif; }
+  .muted { color:var(--muted); font-size:14px; }
+  .hide { display:none; }
+  .size { text-align:center; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 108 108" aria-hidden="true">
+    <g fill="#D4AF37"><circle cx="54" cy="21.6" r="3.5"/><circle cx="76.9" cy="31.1" r="3.5"/><circle cx="86.4" cy="54" r="3.5"/>
+      <circle cx="76.9" cy="76.9" r="3.5"/><circle cx="54" cy="86.4" r="3.5"/><circle cx="31.1" cy="76.9" r="3.5"/>
+      <circle cx="21.6" cy="54" r="3.5"/><circle cx="31.1" cy="31.1" r="3.5"/></g>
+    <path d="M54 46 L32.4 43.6 L32.4 64.5 L54 66.9 Z M54 46 L75.6 43.6 L75.6 64.5 L54 66.9 Z" fill="#FAF4E4" stroke="#D4AF37" stroke-width="1.6"/>
+  </svg>
+  <h1>ختمة جماعية</h1>
+  <p class="sub">نقرأ معًا… ونختم القرآن معًا</p>
+  <p class="sub fr" style="text-align:center">Khatma collective · Lisons ensemble… et terminons le Coran ensemble</p>
+</header>
+<main>
+  <!-- Invitation (when the link carries ?c=CODE) -->
+  <div id="invite" class="card hide">
+    <p style="margin-top:0"><b>دُعيت إلى ختمة جماعية</b> · <span class="fr">Vous êtes invité à une khatma collective</span></p>
+    <div class="code" id="code"></div>
+    <a class="btn green" id="open" href="#">افتح التطبيق وانضمّ · Ouvrir l'application</a>
+    <p class="muted">إن لم يكن التطبيق مثبّتًا، حمّله أولًا ثم عد إلى هذا الرابط، أو أدخل الرمز في التطبيق.<br>
+      <span class="fr">Si l'application n'est pas installée, téléchargez-la puis rouvrez ce lien, ou saisissez le code dans l'application.</span></p>
+  </div>
+
+  <div class="card">
+    <a class="btn gold" id="dl" href="https://github.com/tsalatnet/tsalat-media/releases/download/khatma/khatma.apk">⬇️ تحميل التطبيق · Télécharger</a>
+    <p class="size muted" id="ver">Android · APK</p>
+  </div>
+
+  <div class="card">
+    <b>طريقة التثبيت</b>
+    <ol>
+      <li>اضغط «تحميل التطبيق» وانتظر انتهاء التحميل.</li>
+      <li>افتح الملف <b>khatma.apk</b> من الإشعارات أو من مجلد التنزيلات.</li>
+      <li>إن طلب الهاتف ذلك، اسمح بـ«تثبيت التطبيقات من هذا المصدر»، ثم «تثبيت».</li>
+      <li>افتح «ختمة جماعية»: تحصل على رقمك، ثم أدخل اسمك وأرسل رقمك إلى المشرف.</li>
+    </ol>
+  </div>
+  <div class="card fr">
+    <b>Installation</b>
+    <ol>
+      <li>Appuyez sur « Télécharger » et attendez la fin du téléchargement.</li>
+      <li>Ouvrez le fichier <b>khatma.apk</b> (notification ou dossier Téléchargements).</li>
+      <li>Si le téléphone le demande, autorisez « Installer des applications de cette source », puis « Installer ».</li>
+      <li>Ouvrez « ختمة جماعية » : vous recevez votre numéro, saisissez votre nom et envoyez votre numéro à l'administrateur.</li>
+    </ol>
+  </div>
+  <p class="muted" style="text-align:center">الفكرة: عفيف مالك · الإنجاز: يوسف فرج<br><span class="fr">Idée : Afif Malek · Réalisation : Youssef FREJ</span></p>
+</main>
+<script>
+  // Invitation link: …/k/?c=CODE → show the code and open the app (khatma://join?c=CODE).
+  const c = (new URLSearchParams(location.search).get("c") || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12);
+  if (c) {
+    document.getElementById("invite").classList.remove("hide");
+    document.getElementById("code").textContent = c;
+    document.getElementById("open").href =
+      "intent://join?c=" + c + "#Intent;scheme=khatma;package=net.tsalat.khatma;S.browser_fallback_url=" +
+      encodeURIComponent(document.getElementById("dl").href) + ";end";
+  }
+  fetch("version.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {
+    if (v) document.getElementById("ver").textContent = "Android · " + v.versionName + " · " + Math.round(v.size / 1048576) + " MB · " + v.date;
+  }).catch(() => {});
+</script>
+</body>
+</html>
