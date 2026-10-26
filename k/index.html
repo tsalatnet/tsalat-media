@@ -52,12 +52,21 @@
       <span class="fr">Si l'application n'est pas installée, téléchargez-la puis rouvrez ce lien, ou saisissez le code dans l'application.</span></p>
   </div>
 
-  <div class="card">
+  <!-- iPhone: the web app, installed from Safari (guide inside) -->
+  <div class="card ios hide">
+    <p style="margin-top:0"><b> iPhone</b></p>
+    <a class="btn gold" id="iosapp" href="app/">📱 افتح التطبيق للتثبيت · Ouvrir pour installer</a>
+    <p class="muted">افتح هذه الصفحة في <b>Safari</b>، ثم اتبع الخطوات الثلاث التي تظهر.<br>
+      <span class="fr">Ouvrez cette page dans <b>Safari</b>, puis suivez les 3 étapes affichées.</span></p>
+  </div>
+
+  <div class="card android">
+    <p style="margin-top:0"><b>🤖 Android</b></p>
     <a class="btn gold" id="dl" href="https://github.com/tsalatnet/tsalat-media/releases/download/khatma/khatma.apk">⬇️ تحميل التطبيق · Télécharger</a>
     <p class="size muted" id="ver">Android · APK</p>
   </div>
 
-  <div class="card">
+  <div class="card android">
     <b>طريقة التثبيت</b>
     <ol>
       <li>اضغط «تحميل التطبيق» وانتظر انتهاء التحميل.</li>
@@ -66,7 +75,7 @@
       <li>افتح «ختمة جماعية»: تحصل على رقمك، ثم أدخل اسمك وأرسل رقمك إلى المشرف.</li>
     </ol>
   </div>
-  <div class="card fr">
+  <div class="card fr android">
     <b>Installation</b>
     <ol>
       <li>Appuyez sur « Télécharger » et attendez la fin du téléchargement.</li>
@@ -80,7 +89,14 @@
 <script>
   // Invitation link: …/k/?c=CODE → show the code and open the app (khatma://join?c=CODE).
   const c = (new URLSearchParams(location.search).get("c") || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12);
-  if (c) {
+  // An iPhone gets the web app (installed from Safari), every other phone the Android APK.
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (ios) {
+    document.querySelectorAll(".android").forEach((e) => e.classList.add("hide"));
+    document.querySelector(".ios").classList.remove("hide");
+    document.getElementById("iosapp").href = "app/" + (c ? "?c=" + c : "");
+    if (c) { location.replace("app/?c=" + c); }
+  } else if (c) {
     document.getElementById("invite").classList.remove("hide");
     document.getElementById("code").textContent = c;
     document.getElementById("open").href =
