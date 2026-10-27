@@ -1,7 +1,7 @@
 // ختمة جماعية — offline: the app shell is kept (refreshed in the background), and every mushaf page
 // once seen stays available without network. The server calls (Supabase) are never cached.
-const SHELL = "khatma-shell-1", PAGES = "khatma-mushaf-1";
-const FILES = ["./", "index.html", "styles.css?v=1", "strings.js?v=1", "core.js?v=1", "app.js?v=1", "icon-192.png", "icon-180.png"];
+const SHELL = "khatma-shell-4", PAGES = "khatma-mushaf-1";
+const FILES = ["./", "index.html", "styles.css?v=4", "strings.js?v=4", "core.js?v=4", "app.js?v=4", "icon-192.png", "icon-180.png"];
 
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {

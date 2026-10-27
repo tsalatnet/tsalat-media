@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.0";
+const VERSION = "1.3";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -96,6 +96,7 @@ async function refresh(withRender = true) {
 const topS = () => st.stack[st.stack.length - 1];
 function push(s) { st.stack.push(s); render(); window.scrollTo(0, 0); }
 function back() { if (st.dialog) { st.dialog = null; } else if (st.sheet) { st.sheet = null; } else st.stack.pop(); render(); }
+const desc = (arr, f = (x) => x) => [...arr].sort((a, b) => f(b) - f(a));   // members: always by decreasing number
 const member = (id) => st.ov && st.ov.members.find((m) => m.id === id);
 
 // ─── small views ───
@@ -213,7 +214,7 @@ function vKhatmas() {
     return `<div class="card tap" data-a="khatma" data-x="${k.id}"><div class="row sp"><div><b>${LTR(k.id)}</b><p class="mut sm">${h(k.circle)} · ${t().khatmaN(k.round + 1)}</p></div>
       <b class="${late ? "lt" : "mut"} sm">${left ? "⏳ " + left : "⌛ " + t().deadlinePassed}</b></div>${bar(k.parts, late)}
       <p class="legend"><i class="done"></i>${t().legendDone(c("done"))} <i class="${late ? "late" : "started"}"></i>${t().legendStarted(c("started"))} <i class="${late ? "late" : "assigned"}"></i>${t().legendAssigned(c("assigned"))}</p>
-      ${k.parts.map((p) => `<div class="row sp mt">${memberName(p.user_id, p.name, false)}${statusChip(p.status, late && p.status !== "done")}</div>`).join("")}</div>`;
+      ${desc(k.parts, (p) => p.user_id).map((p) => `<div class="row sp mt">${memberName(p.user_id, p.name, false)}${statusChip(p.status, late && p.status !== "done")}</div>`).join("")}</div>`;
   }).join("");
   if (closed.length) out += `<h4>${t().finished}</h4>` + closed.map((k) => { const d = k.parts.filter((p) => p.status === "done").length;
     return `<div class="card tap row sp" data-a="khatma" data-x="${k.id}"><div><b>${LTR(k.id)}</b><p class="mut sm">${h(k.circle)} · ${date(k.closed_at)}</p></div>
@@ -226,7 +227,7 @@ function vCircles() {
     ov.circles.map((c) => `<div class="card tap" data-a="circle" data-x="${c.id}"><div class="row sp"><div><b>${h(c.name)}</b><p class="mut sm">${t().circleInfo(c.members.length, c.rounds)}</p>
       ${c.members.length ? `<p class="gold-t xs">${t().cycle(c.rounds % c.members.length, c.members.length)}</p>` : ""}</div>
       ${c.active ? btn(t().runningLink, "khatma", c.active, "text") : btn(t().startLink, "create", c.id, "text")}</div>
-      ${c.members.map((id) => `<div class="mt">${memberName(id, member(id)?.name, false)}</div>`).join("")}</div>`).join("");
+      ${desc(c.members).map((id) => `<div class="mt">${memberName(id, member(id)?.name, false)}</div>`).join("")}</div>`).join("");
 }
 function vMembers() {
   const ov = st.ov;
@@ -235,7 +236,7 @@ function vMembers() {
   if (ov.requests.length) out += `<h4>${t().requestsCount(ov.requests.length)}</h4>` + ov.requests.map((r) => `<div class="card hl row sp"><div>${memberName(r.id, r.name)}<p class="xs">${dateTime(r.at)}</p></div>
     <div class="row">${btn(t().refuse, "answer", r.id + ":0", "text red")}${btn(t().accept, "answer", r.id + ":1")}</div></div>`).join("");
   out += `<h4>${t().addByNumber}</h4><div class="row"><input id="addnum" inputmode="numeric" maxlength="5" placeholder="${t().number}">${btn(t().add, "addMember", "", "tonal")}</div>
-    <h4>${t().membersCount(ov.members.length)}</h4>` + ov.members.map((m) => `<div class="card row gap">${ring(m.coverage / 604, 44, "var(--primary)", `<small>${Math.floor((m.coverage * 100) / 604)}</small>`)}
+    ${btn(t().sync, "syncAsk", "", "outline wide")}<h4>${t().membersCount(ov.members.length)}</h4>` + ov.members.map((m) => `<div class="card row gap">${ring(m.coverage / 604, 44, "var(--primary)", `<small>${Math.floor((m.coverage * 100) / 604)}</small>`)}
     <div class="grow">${memberName(m.id, m.name)}<p class="mut xs">${m.personal_khatmas ? "🌟 " + LTR(m.personal_khatmas) + " · " : ""}${m.busy ? t().inKhatma(m.busy) : t().free}</p></div>
     ${m.id !== userId() && !m.busy ? `<button class="ic red" data-a="removeMember" data-x="${m.id}">✕</button>` : ""}</div>`).join("");
   return out;
@@ -250,7 +251,7 @@ function vKhatmaDetail(id) {
     ${active ? `<b class="${late ? "lt" : "pr"} sm">${remaining(k.deadline) ? t().leftWithDeadline(remaining(k.deadline), k.hours) : "⌛ " + t().deadlinePassed}</b>`
       : `<b class="${k.incomplete ? "st" : "ok"} sm">${k.incomplete ? t().closedIncomplete(dateTime(k.closed_at)) : t().closedComplete(dateTime(k.closed_at))}</b>`}</div></div>
     ${bar(k.parts, active && late)}</div><h4>${t().readersTitle}</h4>
-    ${k.parts.map((p) => { const n = p.to - p.from + 1, read = p.status === "done" ? n : p.last_page ? p.last_page - p.from + 1 : 0;
+    ${desc(k.parts, (p) => p.user_id).map((p) => { const n = p.to - p.from + 1, read = p.status === "done" ? n : p.last_page ? p.last_page - p.from + 1 : 0;
       return `<div class="card ${active && p.status !== "done" ? "tap" : ""}" ${active && p.status !== "done" ? `data-a="sheet" data-x="${k.id}#${p.idx}"` : ""}>
       <div class="row sp"><div>${memberName(p.user_id, p.name)}<p class="mut sm">${t().pagesShort} ${LTR(p.from + "–" + p.to)} · ${h(Mushaf.range(p.from, p.to, st.lang))}</p></div>${statusChip(p.status, active && late && p.status !== "done")}</div>
       ${p.status === "started" ? `<div class="lin st"><i style="width:${(read / n) * 100}%"></i></div><p class="mut xs">${t().reachedPage(p.last_page || p.from, read, n)}</p>` : ""}
@@ -279,19 +280,19 @@ function vCreate() {
   let body = "";
   if (w.step === 0) body = ov.circles.map((ci) => `<div class="card ${ci.active ? "dim" : "tap"}" ${ci.active ? "" : `data-a="wizCircle" data-x="${ci.id}"`}><b>${h(ci.name)}</b>
     <p class="${ci.active ? "st" : "mut"} sm">${ci.active ? t().circleBusy(ci.active) : t().circleNextKhatma(ci.members.length, ci.rounds + 1)}</p>
-    ${ci.members.map((id) => `<div class="mt">${memberName(id, member(id)?.name, false)}</div>`).join("")}</div>`).join("");
+    ${desc(ci.members).map((id) => `<div class="mt">${memberName(id, member(id)?.name, false)}</div>`).join("")}</div>`).join("");
   else if (w.step === 1) {
     const n = w.sel.length, q = n ? Math.floor(604 / n) : 0;
     body = `<h2>${h(c ? c.name : "")}</h2><h4>${t().deadline}</h4><div class="chips">${[12, 24, 48, 72, 168].map((x) =>
       `<button class="fchip ${w.hours === x ? "on" : ""}" data-a="hours" data-x="${x}">${x === 168 ? t().week : t().hoursChip(x)}</button>`).join("")}</div>
       <div class="row stepper"><button class="ic" data-a="hoursAdd" data-x="-1">−</button><b>${t().hours(w.hours)}</b><button class="ic" data-a="hoursAdd" data-x="1">+</button></div>
       <h4>${t().readersCount(n)}</h4>${n ? `<p class="gold-t sm">${t().eachPortion(q, 604 % n ? q + (604 % n) : null)}</p>` : ""}
-      ${w.input ? w.input.members.map((m) => `<label class="check ${m.busy ? "dim" : ""}"><input type="checkbox" data-a="wsel" data-x="${m.id}" ${w.sel.includes(m.id) ? "checked" : ""} ${m.busy ? "disabled" : ""}>
+      ${w.input ? desc(w.input.members, (m) => m.id).map((m) => `<label class="check ${m.busy ? "dim" : ""}"><input type="checkbox" data-a="wsel" data-x="${m.id}" ${w.sel.includes(m.id) ? "checked" : ""} ${m.busy ? "disabled" : ""}>
         <span class="grow">${memberName(m.id, m.name)}<small class="${m.busy ? "st" : "mut"}">${m.busy ? t().participating(m.busy) : t().readInCycle((m.coverage.match(/1/g) || []).length)}</small></span></label>`).join("") : `<div class="spin"></div>`}
       ${btn(t().nextDistribution, "wizNext", "", "wide " + (n ? "" : "off"))}`;
   } else {
     body = `<div class="card hl"><b>${h(c ? c.name : "")} · ${t().khatmaN((w.input ? w.input.round : 0) + 1)}</b><p class="sm">${t().summary(w.sel.length, w.hours)}</p><p class="xs">${t().distributionExplained}</p></div>
-      ${w.plan ? w.plan.map((x) => `<div class="card row sp"><div>${memberName(x.userId, x.name)}<p class="mut sm">${h(Mushaf.range(x.pages[0], x.pages[1], st.lang))}</p></div>
+      ${w.plan ? desc(w.plan, (x) => x.userId).map((x) => `<div class="card row sp"><div>${memberName(x.userId, x.name)}<p class="mut sm">${h(Mushaf.range(x.pages[0], x.pages[1], st.lang))}</p></div>
         <div class="end"><b>${t().pagesShort} ${LTR(x.pages[0] + "–" + x.pages[1])}</b><small class="${x.unread === x.pages[1] - x.pages[0] + 1 ? "ok" : "st"}">${x.unread === x.pages[1] - x.pages[0] + 1 ? t().allNew : t().newPages(x.unread, x.pages[1] - x.pages[0] + 1)}</small></div></div>`).join("") : `<div class="spin"></div>`}
       ${btn(t().startKhatma, "wizCreate", "", "wide " + (w.plan ? "" : "off"))}`;
   }
@@ -305,7 +306,8 @@ function vSettings() {
     <h4>${t().name}</h4><div class="row"><input id="sname" maxlength="40" value="${h(me.name)}">${btn(t().save, "saveName", "", "tonal")}</div>
     <h4>${t().myGroups}</h4>${me.links.map((l) => `<p>${l.status === "pending" ? t().groupPending(h(l.admin)) : t().groupMember(h(l.admin))}</p>`).join("")}
     <div class="row"><input id="code" class="code" maxlength="6" placeholder="${t().otherInvite}">${btn(t().join, "join", "", "tonal")}</div>
-    <h4>${t().adminSection}</h4>${me.is_admin ? `<p><b>${t().youAreAdmin(me.invite_code || "")}</b></p>` : btn(t().enableAdmin, "adminDialog", "", "outline")}
+    <h4>${t().adminSection}</h4>${me.assists ? `<p><b>${t().youAssist(h(me.assists.name), me.invite_code || "")}</b></p>` : me.is_admin ? `<p><b>${t().youAreAdmin(me.invite_code || "")}</b></p>` : ""}
+    ${me.is_admin ? btn(t().closeAdmin, "closeAdminAsk", "", "outline red") : btn(t().enableAdmin, "adminDialog", "", "outline")}
     ${btn("ℹ️  " + t().aboutTitle, "push", "about", "outline wide")}</main>`;
 }
 function vAbout() {
@@ -364,7 +366,7 @@ function setupReader(sc) {
 function vDialog() {
   const d = st.dialog; if (!d) return "";
   return `<div class="scrim" data-a="dclose"><div class="dlg" data-stop="1"><h3>${d.title}</h3>${d.text ? `<p>${d.text}</p>` : ""}${d.body || ""}
-    <div class="row end">${d.cancel === false ? "" : btn(t().cancel, "dclose", "", "text")}${d.ok ? btn(d.okLabel, "dok", "", "") : ""}</div></div></div>`;
+    <div class="row end">${d.cancel === false ? "" : btn(d.cancelLabel || t().cancel, "dclose", "", "text")}${d.ok ? btn(d.okLabel, "dok", "", "") : ""}</div></div></div>`;
 }
 function vSheet() {
   const s = st.sheet; if (!s) return "";
@@ -419,6 +421,10 @@ const A = {
     act(async () => { const r = await rpc("khatma_join", auth({ p_code: c })); await reload(); toast(r.status === "accepted" ? t().memberOf(r.admin) : t().requestSent(r.admin)); }); },
   adminDialog() { st.dialog = { title: t().adminMode, text: t().adminCodeAsk, body: `<input id="acode" placeholder="KH-XXXX" autocapitalize="characters">`, okLabel: t().enable,
     ok: (code) => act(async () => { await rpc("khatma_admin_enable", auth({ p_code: code.toUpperCase() })); await reload(); st.ov = await rpc("khatma_admin_overview", auth()); st.adminTab = true; }, () => t().adminEnabled) }; render(); },
+  syncAsk() { st.dialog = { title: t().sync, text: t().syncText, okLabel: t().syncOk,
+    ok: () => act(async () => { const n = await rpc("khatma_admin_sync", auth()); st.ov = await rpc("khatma_admin_overview", auth()); toast(n > 0 ? t().synced(n) : t().syncNone); }) }; render(); },
+  closeAdminAsk() { st.dialog = { title: t().closeAdmin, text: t().closeAdminText, okLabel: t().closeAdminOk,
+    ok: () => act(async () => { await rpc("khatma_admin_logout", auth()); st.adminTab = false; st.ov = null; st.stack = []; await reload(); }, () => t().adminClosed) }; render(); },
   dclose() { st.dialog = null; st.sheet = null; render(); },
   dok() { const d = st.dialog, typed = val("acode"); st.dialog = null; render(); d.ok(typed); },   // read the dialog input before it closes
   tab(x) { st.adminTab = x === "1"; if (st.adminTab) refresh(); render(); },
@@ -442,8 +448,8 @@ const A = {
   circleSave(x) { const cs = st.circleSel, name = val("cname"); if (!name || !cs.sel.length) return;
     act(async () => { const cid = await rpc("khatma_circle_save", auth({ p_id: x === "" ? null : +x, p_name: name, p_members: cs.sel }));
       st.ov = await rpc("khatma_admin_overview", auth()); st.stack.pop(); if (x === "") A.create(String(cid)); }, () => t().circleSaved); },
-  circleDelAsk(x) { const c = st.ov.circles.find((q) => q.id === +x); st.dialog = { title: t().deleteCircleTitle(h(c.name)), text: t().deleteCircleText, okLabel: t().del,
-    ok: () => act(async () => { await rpc("khatma_circle_archive", auth({ p_id: +x })); st.ov = await rpc("khatma_admin_overview", auth()); st.stack.pop(); }, () => t().circleDeleted) }; render(); },
+  circleDelAsk(x) { const c = st.ov.circles.find((q) => q.id === +x); st.dialog = { title: t().deleteCircleTitle(h(c.name)), text: c.active ? t().deleteCircleActiveText(c.active) : t().deleteCircleText, okLabel: t().deleteCircleOk, cancelLabel: t().keep,
+    ok: () => act(async () => { await rpc("khatma_circle_cancel", auth({ p_id: +x })); st.ov = await rpc("khatma_admin_overview", auth()); st.me = await rpc("khatma_me", auth()); st.stack.pop(); }, () => t().circleDeleted) }; render(); },
   create(x) { st.wiz = { circle: x ? +x : null, step: x ? 1 : 0, hours: 24, sel: [], input: null, plan: null }; push({ s: "create" }); if (x) loadPlan(); },
   wizCircle(x) { st.wiz.circle = +x; st.wiz.step = 1; render(); loadPlan(); },
   hours(x) { st.wiz.hours = +x; render(); }, hoursAdd(x) { st.wiz.hours = Math.max(1, Math.min(2160, st.wiz.hours + +x)); render(); },
