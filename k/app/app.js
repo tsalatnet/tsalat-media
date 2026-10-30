@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.6";
+const VERSION = "1.7";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -77,7 +77,13 @@ async function reload() {
     try { const r = await rpc("khatma_join", auth({ p_code: code })); toast(r.status === "accepted" ? t().memberOf(r.admin) : t().requestSent(r.admin)); st.me = await rpc("khatma_me", auth()); }
     catch (e) { toast(errorText(e)); }
   }
+  // Named, in no group, no request: ask the admin(s) at once (no more «أرسل رقمي» through another app).
+  if (me.name && st.phase === "gate" && !me.links.length && !store.get("invite") && !reload.joinAsked) {
+    reload.joinAsked = true;
+    try { const r = await rpc("khatma_request_join", auth()); st.me = await rpc("khatma_me", auth()); if (r.sent > 0) joinSent(r.admin); } catch (e) {}
+  }
 }
+function joinSent(admin) { st.dialog = { title: t().joinSentTitle, text: t().joinSentText(h(admin), st.me.id), cancelLabel: t().ok }; }
 async function start() {
   st.phase = "loading"; render();
   try {
@@ -150,7 +156,7 @@ function vGate() {
   const me = st.me, pending = me.links.find((l) => l.status === "pending");
   return `${hero(t().gateTitle(me.name), t().gateSubtitle, badge(me.id, t().yourNumber))}<main>
     ${pending ? `<div class="card hl"><b>⏳ ${t().requestPending(h(pending.admin))}</b><p class="mut">${t().notifiedOnAccept}</p></div>` : ""}
-    <div class="card"><h3>${t().step1}</h3><p class="mut">${t().step1Text(me.id)}</p>${btn("📤  " + t().sendMyNumber, "shareNumber", "", "wide")}</div>
+    ${pending ? "" : `<div class="card"><h3>${t().step1}</h3><p class="mut">${t().step1Text(me.id)}</p>${btn(t().requestJoinBtn, "requestJoin", "", "wide")}</div>`}
     <div class="card"><h3>${t().step2}</h3><p class="mut">${t().step2Text}</p>
       <div class="row"><input id="code" class="code" maxlength="6" placeholder="ABC123" autocapitalize="characters">${btn(t().join, "join", "", "tonal")}</div></div>
     <div class="center">${btn(t().iAmAdmin, "adminDialog", "", "text")}</div></main>`;
@@ -310,7 +316,7 @@ function vCreate() {
 }
 function vSettings() {
   const me = st.me;
-  return sub(t().settings) + `<main><div class="card"><small class="mut">${t().myNumber}</small><div class="bigcode">${LTR(me.id)}</div>${btn("📤  " + t().sendMyNumber, "shareNumber", "", "outline")}</div>
+  return sub(t().settings) + `<main><div class="card"><small class="mut">${t().myNumber}</small><div class="bigcode">${LTR(me.id)}</div></div>
     <h4>${t().language} · ${st.lang === "ar" ? "Langue" : "اللغة"}</h4><div class="row">
       <button class="fchip grow ${st.lang === "ar" ? "on" : ""}" data-a="setLang" data-x="ar">العربية</button><button class="fchip grow ${st.lang === "fr" ? "on" : ""}" data-a="setLang" data-x="fr">Français</button></div>
     <h4>${t().name}</h4><div class="row"><input id="sname" maxlength="40" value="${h(me.name)}">${btn(t().save, "saveName", "", "tonal")}</div>
@@ -469,7 +475,7 @@ const A = {
   setLang(l) { st.lang = l; store.set("lang", l); if (userId()) rpc("khatma_set_lang", auth({ p_lang: l })).catch(() => {}); render(); },
   setName() { const n = val("name"); if (n.length < 2) return; act(async () => { await rpc("khatma_set_name", auth({ p_name: n })); await reload(); }); },
   saveName() { const n = val("sname"); act(async () => { await rpc("khatma_set_name", auth({ p_name: n })); await reload(); }, () => t().nameSaved); },
-  shareNumber() { share(t().shareNumberText(st.me.name, st.me.id)); },
+  requestJoin() { act(async () => { const r = await rpc("khatma_request_join", auth()); await reload(); joinSent(r.admin); }); },
   join() { const c = val("code").toUpperCase(); if (c.length !== 6) return;
     act(async () => { const r = await rpc("khatma_join", auth({ p_code: c })); await reload(); toast(r.status === "accepted" ? t().memberOf(r.admin) : t().requestSent(r.admin)); }); },
   adminDialog() { st.dialog = { title: t().adminMode, text: t().adminCodeAsk, body: `<input id="acode" placeholder="KH-XXXX" autocapitalize="characters">`, okLabel: t().enable,
