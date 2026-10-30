@@ -93,7 +93,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; } .alogo { wi
 .arrow { text-align: center; font-size: 34px; color: #0a84ff; animation: bob 1.2s ease-in-out infinite; } @keyframes bob { 50% { transform: translateY(8px); } }
 /* mushaf reader */
 .reader { position: fixed; inset: 0; background: #FFFDF6; } .reader.night { background: #101412; }
-.pages { position: absolute; inset: var(--top) 0 var(--bot) 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.pages { position: absolute; inset: calc(var(--top) + 30px) 0 calc(var(--bot) + 44px) 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .pages::-webkit-scrollbar { display: none; }
 .pg { flex: 0 0 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; align-items: center; justify-content: center; }
 .pg img { max-width: 100%; max-height: 100%; aspect-ratio: 530 / 830; object-fit: contain; }
@@ -103,6 +103,19 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; } .alogo { wi
 .rtop b { display: block; font: 700 21px "Amiri", serif; } .rtop small { color: var(--goldsoft); }
 .rbot { bottom: 0; background: var(--card); padding: 10px 16px calc(10px + var(--bot)); }
 .bare .rtop, .bare .rbot { opacity: 0; pointer-events: none; }
+/* the empty bands above / under the page: surahs of the page, page in the mushaf, place in the part */
+.band { position: absolute; inset-inline: 0; text-align: center; color: #6B5524; font-size: 13px; line-height: 1.35; padding: 0 12px; }
+.night .band { color: #CFC6A8; }
+.band.t { top: calc(var(--top) + 6px); font-weight: 700; font-size: 14px; }
+.band.b { bottom: calc(var(--bot) + 4px); } .band.b b { display: block; }
+/* free reading: browse by unit, search */
+.units { display: flex; gap: 6px; } .units .fchip { flex: 1; padding: 6px 0; }
+.navrow { display: flex; align-items: center; direction: rtl; margin-top: 6px; } .navrow b { flex: 1; text-align: center; }
+.navrow .btn.text:disabled { opacity: .35; }
+.navgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; max-height: 50vh; overflow: auto; }
+.navgrid.j { grid-template-columns: repeat(5, 1fr); }
+.navlist { max-height: 50vh; overflow: auto; } .navlist .tap { display: flex; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line, #ddd); }
+.navlist .tap b { width: 34px; color: var(--primary); } .navlist .tap span { flex: 1; }
 /* the portion card's first line: id and countdown never wrap, the circle name gives way */
 .hcard .row.sp { flex-wrap: nowrap; } .hcard .kid, .hcard .row.sp b { white-space: nowrap; flex: none; }
 .hcard .row.sp .o8 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

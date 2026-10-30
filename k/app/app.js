@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.3";
+const VERSION = "1.4";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -66,6 +66,8 @@ async function reload() {
   const me = await rpc("khatma_me", auth());
   st.me = me;
   if (me.lang !== st.lang) rpc("khatma_set_lang", auth({ p_lang: st.lang })).catch(() => {});
+  // No push in the iPhone web app: the admin sees «📱 آيفون» instead of a silent failure.
+  if (!reload.pushSent) rpc("khatma_set_push", auth({ p_platform: "ios-web", p_sub: null, p_ok: false })).then(() => (reload.pushSent = true)).catch(() => {});
   if (me.is_admin && (!st.ov || st.adminTab || st.stack.length)) st.ov = await rpc("khatma_admin_overview", auth());
   st.phase = !me.name ? "name" : !(me.is_admin || me.links.some((l) => l.status === "accepted")) ? "gate" : "home";
   const code = store.get("invite");
@@ -104,8 +106,8 @@ function memberName(id, name, bold = true) {
   return `<span class="mn"><span class="mnum">${LTR(id)}</span><span class="${bold ? "b" : ""}">${h(name || "—")}</span></span>`;
 }
 function statusChip(s, late) {
-  const k = s === "done" ? "done" : late ? "late" : s;
-  const lbl = s === "done" ? t().stDone : late ? t().stLate : s === "started" ? t().stStarted : t().stAssigned;
+  const k = s === "done" || s === "given" ? "done" : late ? "late" : s;
+  const lbl = s === "done" ? t().stDone : s === "given" ? t().stGiven : late ? t().stLate : s === "started" ? t().stStarted : t().stAssigned;
   return `<span class="chip ${k}"><i></i>${lbl}</span>`;
 }
 function ring(p, size, color, inner) {
@@ -173,15 +175,20 @@ function vReaderHome() {
   for (const p of active) {
     const n = p.to - p.from + 1, read = p.status === "done" ? n : p.last_page ? Math.max(0, Math.min(n, p.last_page - p.from + 1)) : 0;
     const late = ts(p.deadline) && Date.now() > ts(p.deadline) && p.status !== "done", left = remaining(p.deadline);
-    const label = p.status === "assigned" ? t().startReading : p.status === "started" ? t().continueReading(p.last_page || p.from) : t().doneWaiting;
+    const label = p.given ? t().givenWaiting : p.status === "assigned" ? t().startReading : p.status === "started" ? t().continueReading(p.last_page || p.from) : t().doneWaiting;
     out += `<div class="hcard"><div class="row sp"><span class="kid">${LTR(p.khatma_id)}</span><span class="o8">${h(p.circle)}</span>
       <b class="${late ? "lt" : ""}">${p.status === "done" ? "✓" : late ? "⌛ " + t().deadlinePassed : left ? "⏳ " + left : ""}</b></div>
       <div class="row gap">${ring(read / n, 104, "#D4AF37", `<b>${Math.floor((read / n) * 100)}${t().pct}</b><small>${LTR(read + "/" + n)}</small>`)}
       <div><small class="o7">${t().myPortion}</small><h2>${h(t().fromSurah(Mushaf.name(Mushaf.surahAtTop(p.from), st.lang)))}</h2>
       <h2>${h(t().toSurah(Mushaf.name(Mushaf.surahAt(p.to), st.lang)))}</h2><small class="gs">${t().pagesLine(p.from, p.to, n)}</small></div></div>
-      <small class="o8">${t().readersDone(p.done, p.readers)}</small><div class="lin"><i style="width:${p.readers ? (p.done / p.readers) * 100 : 0}%"></i></div>
+      ${p.helper ? `<small class="gs">🤝 ${t().helperNote}</small>` : ""}${p.given && p.cut ? `<small class="gs">🔀 ${t().givenNote(p.cut, p.to)}</small>` : ""}
+      <small class="o8">${t().readersDone(p.done, p.readers)} · ${t().khatmaPages(p.pages_done || 0)}</small><div class="lin"><i style="width:${((p.pages_done || 0) / 604) * 100}%"></i></div>
       <button class="btn gold wide" data-a="open" data-x="${p.khatma_id}#${p.idx}" ${p.status === "done" ? "disabled" : ""}>${label}</button></div>`;
   }
+  const missed = bitRanges(me.missed);
+  if (missed.length) out += `<div class="card hl"><h3>📌 ${t().missedTitle}</h3><p class="sm">${t().missedText(missed.reduce((a, r) => a + r[1] - r[0] + 1, 0))}</p>
+    ${missed.map((r) => `<div class="row sp mt"><div><b>${t().pagesShort} ${t().rng(r[0], r[1])}</b><p class="mut xs">${h(Mushaf.range(r[0], r[1], st.lang))}</p></div>
+    ${btn(t().readThem, "catchup", r[0] + "-" + r[1], "tonal")}</div>`).join("")}</div>`;
   const cov = me.coverage, k = me.personal_khatmas;
   out += `<div class="card"><h3>${t().myCycle}</h3><p class="gold-t">${t().fullKhatmas(k)}</p>
     <div class="row gap">${ring(cov / 604, 76, "var(--primary)", `<b>${Math.floor((cov * 100) / 604)}${t().pct}</b>`)}
@@ -190,8 +197,9 @@ function vReaderHome() {
     ${btn(t().browseMushaf, "mushaf", "", "outline wide")}`;
   if (hist.length) {
     out += `<h4>${t().history}</h4>` + hist.map((p) => `<div class="card row gap"><div class="hico">${p.incomplete ? "◐" : "✓"}</div>
-      <div class="grow"><b>${LTR(p.khatma_id)}</b><p class="mut sm">${h(Mushaf.range(p.from, p.to, st.lang))} · ${t().pagesShort} ${LTR(p.from + "–" + p.to)}</p>
-      <p class="mut xs">${h(p.circle)} · ${date(p.closed_at || p.created_at)}${p.incomplete ? " · " + t().incomplete : ""}</p></div>${statusChip(p.status, false)}</div>`).join("");
+      <div class="grow"><b>${LTR(p.khatma_id)}</b><p class="mut sm">${h(Mushaf.range(p.from, p.to, st.lang))} · ${t().pagesShort} ${t().rng(p.from, p.to)}</p>
+      <p class="mut xs">${h(p.circle)} · ${date(p.closed_at || p.created_at)}${p.incomplete ? " · " + t().incomplete : ""}</p>
+      ${p.given && p.cut ? `<p class="st xs">${t().givenNote(p.cut, p.to)}</p>` : ""}${p.helper ? `<p class="gold-t xs">${t().helperNote}</p>` : ""}</div>${statusChip(p.given ? "given" : p.status, false)}</div>`).join("");
   }
   return out;
 }
@@ -253,7 +261,8 @@ function vKhatmaDetail(id) {
     ${bar(k.parts, active && late)}</div><h4>${t().readersTitle}</h4>
     ${desc(k.parts, (p) => p.user_id).map((p) => { const n = p.to - p.from + 1, read = p.status === "done" ? n : p.last_page ? p.last_page - p.from + 1 : 0;
       return `<div class="card ${active && p.status !== "done" ? "tap" : ""}" ${active && p.status !== "done" ? `data-a="sheet" data-x="${k.id}#${p.idx}"` : ""}>
-      <div class="row sp"><div>${memberName(p.user_id, p.name)}<p class="mut sm">${t().pagesShort} ${LTR(p.from + "–" + p.to)} · ${h(Mushaf.range(p.from, p.to, st.lang))}</p></div>${statusChip(p.status, active && late && p.status !== "done")}</div>
+      <div class="row sp"><div>${memberName(p.user_id, p.name)}<p class="mut sm">${t().pagesShort} ${t().rng(p.from, p.to)} · ${h(Mushaf.range(p.from, p.to, st.lang))}</p></div>${statusChip(p.given ? "given" : p.status, active && late && p.status !== "done")}</div>
+      ${p.given && p.cut ? `<p class="st xs">🔀 ${t().givenNote(p.cut, p.to)}</p>` : ""}
       ${p.status === "started" ? `<div class="lin st"><i style="width:${(read / n) * 100}%"></i></div><p class="mut xs">${t().reachedPage(p.last_page || p.from, read, n)}</p>` : ""}
       ${p.status === "done" ? `<p class="ok xs">${t().doneAt(dateTime(p.done_at))}</p>` : ""}</div>`; }).join("")}
     ${active ? `<div class="row">${btn(t().remind, "remind", k.id, "outline grow")}${btn(t().closeKhatma, "closeAsk", k.id, "grow")}</div>`
@@ -282,18 +291,18 @@ function vCreate() {
     <p class="${ci.active ? "st" : "mut"} sm">${ci.active ? t().circleBusy(ci.active) : t().circleNextKhatma(ci.members.length, ci.rounds + 1)}</p>
     ${desc(ci.members).map((id) => `<div class="mt">${memberName(id, member(id)?.name, false)}</div>`).join("")}</div>`).join("");
   else if (w.step === 1) {
-    const n = w.sel.length, q = n ? Math.floor(604 / n) : 0;
+    const n = w.sel.length, q = n ? Math.floor(604 / n) : 0, q2 = n ? q + (604 % n ? 1 : 0) : 0;
     body = `<h2>${h(c ? c.name : "")}</h2><h4>${t().deadline}</h4><div class="chips">${[12, 24, 48, 72, 168].map((x) =>
       `<button class="fchip ${w.hours === x ? "on" : ""}" data-a="hours" data-x="${x}">${x === 168 ? t().week : t().hoursChip(x)}</button>`).join("")}</div>
       <div class="row stepper"><button class="ic" data-a="hoursAdd" data-x="-1">−</button><b>${t().hours(w.hours)}</b><button class="ic" data-a="hoursAdd" data-x="1">+</button></div>
-      <h4>${t().readersCount(n)}</h4>${n ? `<p class="gold-t sm">${t().eachPortion(q, 604 % n ? q + (604 % n) : null)}</p>` : ""}
+      <h4>${t().readersCount(n)}</h4>${n ? `<p class="gold-t sm">${t().eachPortion(q, q2)}</p>` : ""}
       ${w.input ? desc(w.input.members, (m) => m.id).map((m) => `<label class="check ${m.busy ? "dim" : ""}"><input type="checkbox" data-a="wsel" data-x="${m.id}" ${w.sel.includes(m.id) ? "checked" : ""} ${m.busy ? "disabled" : ""}>
         <span class="grow">${memberName(m.id, m.name)}<small class="${m.busy ? "st" : "mut"}">${m.busy ? t().participating(m.busy) : t().readInCycle((m.coverage.match(/1/g) || []).length)}</small></span></label>`).join("") : `<div class="spin"></div>`}
       ${btn(t().nextDistribution, "wizNext", "", "wide " + (n ? "" : "off"))}`;
   } else {
     body = `<div class="card hl"><b>${h(c ? c.name : "")} · ${t().khatmaN((w.input ? w.input.round : 0) + 1)}</b><p class="sm">${t().summary(w.sel.length, w.hours)}</p><p class="xs">${t().distributionExplained}</p></div>
       ${w.plan ? desc(w.plan, (x) => x.userId).map((x) => `<div class="card row sp"><div>${memberName(x.userId, x.name)}<p class="mut sm">${h(Mushaf.range(x.pages[0], x.pages[1], st.lang))}</p></div>
-        <div class="end"><b>${t().pagesShort} ${LTR(x.pages[0] + "–" + x.pages[1])}</b><small class="${x.unread === x.pages[1] - x.pages[0] + 1 ? "ok" : "st"}">${x.unread === x.pages[1] - x.pages[0] + 1 ? t().allNew : t().newPages(x.unread, x.pages[1] - x.pages[0] + 1)}</small></div></div>`).join("") : `<div class="spin"></div>`}
+        <div class="end"><b>${t().pagesShort} ${t().rng(x.pages[0], x.pages[1])}</b><small class="${x.unread === x.pages[1] - x.pages[0] + 1 ? "ok" : "st"}">${x.unread === x.pages[1] - x.pages[0] + 1 ? t().allNew : t().newPages(x.unread, x.pages[1] - x.pages[0] + 1)}</small></div></div>`).join("") : `<div class="spin"></div>`}
       ${btn(t().startKhatma, "wizCreate", "", "wide " + (w.plan ? "" : "off"))}`;
   }
   return sub(titles[w.step]) + `<main>${dots}${body}</main>`;
@@ -318,31 +327,38 @@ function vAbout() {
 
 // ─── mushaf reader (built once; the bars are updated in place) ───
 function vReader(sc) {
-  const part = sc.part, first = part ? part.from : 1, last = part ? part.to : 604;
-  const pages = []; for (let p = first; p <= last; p++) pages.push(p); if (last === 604) pages.push(605, 606);
+  const part = sc.part, cu = sc.catchup, first = part ? part.from : cu ? cu[0] : 1, last = part ? part.to : cu ? cu[1] : 604;
+  const pages = []; for (let p = first; p <= last; p++) pages.push(p); if (last === 604 && !cu) pages.push(605, 606);
   const img = (n) => MUSHAF + (n <= 604 ? String(n).padStart(3, "0") : "dua" + (n - 604)) + ".jpg";
   return `<div class="reader ${store.get("night") === "1" ? "night" : ""}" id="reader"><div class="pages" id="pages" dir="rtl">
     ${pages.map((n) => `<div class="pg" data-p="${n}"><img loading="lazy" decoding="async" src="${img(n)}" alt=""></div>`).join("")}</div>
     <div class="rtop" id="rtop"><button class="ic" data-a="back">${t().back}</button><div class="grow"><b id="rs"></b><small id="rj"></small></div>
-      <button class="ic" data-a="night">🌙</button></div>
-    ${part ? `<div class="rbot" id="rbot"><div class="row"><b id="rc"></b><div class="lin grow"><i id="rl"></i></div></div><div id="rbtn"></div></div>` : ""}</div>`;
+      ${part || cu ? "" : `<button class="ic" data-a="navOpen">🔍</button>`}<button class="ic" data-a="night">🌙</button></div>
+    <div class="band t" id="bt"></div><div class="band b" id="bb"></div>
+    ${part || cu ? "" : `<div class="rbot" id="rbot"><div class="units" id="units"></div><div class="navrow" id="navrow"></div></div>`}
+    ${part || cu ? `<div class="rbot" id="rbot"><div class="row"><b id="rc"></b><div class="lin grow"><i id="rl"></i></div></div><div id="rbtn"></div></div>` : ""}</div>`;
 }
 function setupReader(sc) {
-  const box = document.getElementById("pages"), part = sc.part, key = part ? part.khatma_id + "#" + part.idx : "free";
-  const els = [...box.children], first = part ? part.from : 1, last = part ? part.to : 604;
-  let start = part ? (+store.get("page_" + key, 0) || part.last_page || first) : sc.page;
+  const box = document.getElementById("pages"), part = sc.part, cu = sc.catchup, ranged = !!(part || cu);
+  const key = part ? part.khatma_id + "#" + part.idx : cu ? "missed#" + cu[0] : "free";
+  const els = [...box.children], first = part ? part.from : cu ? cu[0] : 1, last = part ? part.to : cu ? cu[1] : 604;
+  let start = part ? (+store.get("page_" + key, 0) || part.last_page || first) : cu ? (+store.get("page_" + key, 0) || first) : sc.page;
   if (start < first || start > last) start = first;
   const idx0 = els.findIndex((e) => +e.dataset.p === start);
   requestAnimationFrame(() => { if (idx0 > 0) els[idx0].scrollIntoView({ inline: "start", block: "nearest" }); update(); });
   let hideT, sendT, cur = start;
   const chrome = (on) => { document.getElementById("reader").classList.toggle("bare", !on); clearTimeout(hideT);
-    if (on && !(part && cur >= last)) hideT = setTimeout(() => chrome(false), 4000); };
+    if (on && !(ranged && cur >= last)) hideT = setTimeout(() => chrome(false), 4000); };
   function update() {
     const i = Math.round(Math.abs(box.scrollLeft) / box.clientWidth), n = +(els[Math.max(0, Math.min(els.length - 1, i))].dataset.p);
     if (n === update.last) return; update.last = n; cur = n;
     const pg = Math.min(n, 604);
     document.getElementById("rs").textContent = n > 604 ? t().khatmDua : t().surahTitle(Mushaf.name(Mushaf.surahAtTop(pg), st.lang));
     document.getElementById("rj").textContent = t().juzPage(Mushaf.juzAt(pg), pg);
+    document.getElementById("bt").textContent = n > 604 ? t().khatmDua : Mushaf.surahsOn(pg).map((x) => t().surahTitle(Mushaf.name(x, st.lang))).join("  ·  ");
+    const tot = last - first + 1, pos = Math.max(1, Math.min(tot, pg - first + 1));
+    document.getElementById("bb").innerHTML = h(t().pageOfMushaf(pg, Mushaf.hizbAt(pg), Mushaf.juzAt(pg))) + (ranged ? `<b>${h(t().inPortion(pos, tot) + "  ·  " + t().passedLeft(pos - 1, tot - pos + 1))}</b>` : "");
+    if (cu) document.getElementById("rs").textContent = n > 604 ? t().khatmDua : t().catchupTitle;
     store.set("page_" + key, pg);
     if (part) {
       const total = last - first + 1, read = pg - first + 1, me = (st.me.parts || []).find((p) => p.khatma_id === part.khatma_id && p.idx === part.idx) || part;
@@ -353,13 +369,49 @@ function setupReader(sc) {
         ? `<button class="btn wide ${n >= last ? "gold" : "soft"}" data-a="doneAsk">${t().iFinished}</button>` : done ? `<p class="ok center">${t().finishedAccepted}</p>` : "";
       if (me.khatma_status === "active" && !done) { clearTimeout(sendT); sendT = setTimeout(() => rpc("khatma_part_progress", auth({ p_khatma: part.khatma_id, p_idx: part.idx, p_page: pg })).catch(() => {}), 4000); }
       if (n >= last) chrome(true);
+    } else if (!cu) navBar(pg);
+    if (cu) {
+      const total = last - first + 1, read = pg - first + 1;
+      document.getElementById("rc").textContent = LTR(read + "/" + total);
+      document.getElementById("rl").style.width = (read / total) * 100 + "%";
+      document.getElementById("rbtn").innerHTML = sc.finished ? `<p class="ok center">${t().finishedAccepted}</p>`
+        : `<button class="btn wide ${n >= last ? "gold" : "soft"}" data-a="catchupAsk">${t().catchupDone}</button>`;
+      if (n >= last) chrome(true);
     }
   }
   box.addEventListener("scroll", () => { clearTimeout(update.t); update.t = setTimeout(update, 120); }, { passive: true });
   box.addEventListener("click", () => chrome(document.getElementById("reader").classList.contains("bare")));
   sc.cur = () => cur; sc.last = last;
+  // Jump to a page (search, previous / next unit): the pages are laid out right-to-left.
+  sc.go = (p) => { const el = els.find((e) => +e.dataset.p === p); if (el) el.scrollIntoView({ inline: "start", block: "nearest" }); setTimeout(update, 150); };
   chrome(true);
   if (navigator.wakeLock) navigator.wakeLock.request("screen").then((l) => (sc.lock = l)).catch(() => {});
+}
+
+// Free reading: the unit chips and «→ السابق · current · التالي ←» (next on the left, as the pages turn).
+function navBar(pg) {
+  const u = st.navUnit || "surah", prev = Mushaf.previous(u, pg), next = Mushaf.next(u, pg);
+  document.getElementById("units").innerHTML = ["page", "surah", "hizb", "juz"].map((k) =>
+    `<button class="fchip ${k === u ? "on" : ""}" data-a="navUnit" data-x="${k}">${t().units[k]}</button>`).join("");
+  document.getElementById("navrow").innerHTML = `<button class="btn text" data-a="navGo" data-x="${prev ?? ""}" ${prev ? "" : "disabled"}>${t().prevUnit}</button>
+    <b>${h(t().unitHere(u, pg))}</b><button class="btn text" data-a="navGo" data-x="${next ?? ""}" ${next ? "" : "disabled"}>${t().nextUnit}</button>`;
+}
+// 🔍 search: page / surah / hizb / juz'.
+function navBody() {
+  const tab = st.navTab || "surah", pg = topS().cur ? Math.min(604, topS().cur()) : 1;
+  const tabs = `<div class="units">${["page", "surah", "hizb", "juz"].map((k) => `<button class="fchip ${k === tab ? "on" : ""}" data-a="navTab" data-x="${k}">${t().units[k]}</button>`).join("")}</div>`;
+  let body = "";
+  if (tab === "page") body = `<input id="navpage" inputmode="numeric" maxlength="3" placeholder="${t().pageNumber}">${btn(t().goTo, "navPage", "", "wide")}`;
+  else if (tab === "surah") {
+    const q = (st.navQ || "").trim(), here = Mushaf.surahsOn(pg);
+    const list = Array.from({ length: 114 }, (_, i) => i + 1).filter((n) => !q || String(n) === q || SURAH_AR[n - 1].includes(q) || SURAH_FR[n - 1].toLowerCase().includes(q.toLowerCase()));
+    body = `<input id="navq" placeholder="${t().searchSurah}" value="${h(q)}"><div class="navlist">${list.map((n) =>
+      `<div class="tap" data-a="navGo" data-x="${SURAH_START[n - 1]}"><b>${LTR(n)}</b><span class="${here.includes(n) ? "b" : ""}">${h(t().surahTitle(Mushaf.name(n, st.lang)))}</span><small class="mut">${t().pagesShort} ${LTR(SURAH_START[n - 1])}</small></div>`).join("")}</div>`;
+  } else {
+    const hz = tab === "hizb", s = hz ? HIZB_START : JUZ_START, here = hz ? Mushaf.hizbAt(pg) : Mushaf.juzAt(pg);
+    body = `<div class="navgrid ${hz ? "" : "j"}">${s.map((p, i) => `<button class="fchip ${here === i + 1 ? "on" : ""}" data-a="navGo" data-x="${p}">${LTR(i + 1)}</button>`).join("")}</div>`;
+  }
+  return tabs + body;
 }
 
 // ─── dialogs ───
@@ -433,6 +485,17 @@ const A = {
   open(x) { const [k, i] = x.split("#"); const p = st.me.parts.find((q) => q.khatma_id === k && q.idx === +i); if (!p) return;
     if (p.status === "assigned") rpc("khatma_part_start", auth({ p_khatma: k, p_idx: p.idx })).catch(() => {});
     push({ s: "reader", key: x, part: p }); },
+  navOpen() { st.navTab = st.navTab || "surah"; st.navQ = ""; st.dialog = { title: t().navTitle, body: navBody(), cancelLabel: t().cancel }; render(); },
+  navTab(x) { st.navTab = x; st.navQ = ""; st.dialog.body = navBody(); render(); },
+  navUnit(x) { st.navUnit = x; const sc = topS(); if (sc && sc.cur) navBar(Math.min(604, sc.cur())); },
+  navGo(x) { const sc = topS(); if (!x || !sc || !sc.go) return; st.dialog = null; render(); sc.go(+x); },
+  navPage() { const n = +val("navpage"); if (n >= 1 && n <= 604) A.navGo(String(n)); },
+  catchup(x) { const [f, to] = x.split("-").map(Number); push({ s: "reader", key: "missed#" + f, part: null, catchup: [f, to] }); },
+  catchupAsk() { const sc = topS(), [f, to] = sc.catchup;
+    st.dialog = { title: t().catchupTitle, text: t().catchupConfirm(f, to), okLabel: t().yesFinished,
+      ok: () => act(async () => { const r = await rpc("khatma_catchup", auth({ p_from: f, p_to: to })); sc.finished = true; await reload();
+        st.dialog = { title: r.khatm ? t().khatmTitle : t().acceptedTitle, text: r.khatm ? t().khatmText : t().catchupSaved(r.pages), okLabel: t().alhamdulillah, cancel: false,
+          ok: () => { closeReader(); st.stack.pop(); render(); } }; }) }; render(); },
   mushaf() { push({ s: "reader", key: "free", part: null, page: +store.get("page_free", 1) || 1 }); },
   night() { const r = document.getElementById("reader"); const on = !r.classList.contains("night"); r.classList.toggle("night", on); store.set("night", on ? "1" : "0"); },
   doneAsk() { const sc = topS(), p = sc.part, atEnd = sc.cur() >= sc.last;
@@ -487,6 +550,11 @@ document.addEventListener("click", (e) => {
   if (el.dataset.a === "dclose" && e.target.closest("[data-stop]") && !e.target.closest('button[data-a="dclose"]')) return;
   if (el.tagName === "INPUT" && el.type === "checkbox") { e.preventDefault(); }
   const f = A[el.dataset.a]; if (f) { e.stopPropagation(); f(el.dataset.x ?? ""); }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "navq" || !st.dialog) return;
+  st.navQ = e.target.value; const pos = e.target.selectionStart; st.dialog.body = navBody(); render();
+  const i = document.getElementById("navq"); if (i) { i.focus(); i.setSelectionRange(pos, pos); }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "name") A.setName(); if (e.key === "Enter" && e.target.id === "code") A.join(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && userId() && st.phase !== "loading") refresh(); });

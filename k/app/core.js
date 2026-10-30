@@ -29,7 +29,9 @@ const SURAH_FR = ["Al-Fatiha","Al-Baqara","Al-Imran","An-Nisa","Al-Maida","Al-An
   "Ash-Shams","Al-Layl","Ad-Duha","Ash-Sharh","At-Tin","Al-Alaq","Al-Qadr","Al-Bayyina","Az-Zalzala","Al-Adiyat","Al-Qari'a",
   "At-Takathur","Al-Asr","Al-Humaza","Al-Fil","Quraysh","Al-Ma'un","Al-Kawthar","Al-Kafirun","An-Nasr","Al-Masad","Al-Ikhlas",
   "Al-Falaq","An-Nas"];
-const JUZ_START = [1, 22, 42, 62, 82, 102, 121, 142, 162, 182, 201, 222, 242, 262, 282, 302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582];
+// First page of each hizb, measured on the images (core Mushaf.HIZB_START); a juz' = its odd hizb.
+const HIZB_START = [1, 11, 22, 32, 42, 51, 62, 72, 82, 92, 102, 112, 121, 132, 142, 151, 162, 173, 182, 192, 201, 212, 221, 231, 242, 252, 262, 272, 282, 292, 302, 312, 322, 332, 342, 352, 362, 371, 382, 392, 402, 413, 422, 431, 442, 451, 462, 472, 482, 491, 502, 513, 522, 531, 542, 553, 562, 572, 582, 591];
+const JUZ_START = HIZB_START.filter((_, i) => i % 2 === 0);
 // Pages whose first line is a surah header (elsewhere a surah starting on the page starts mid-page).
 const OPENS_WITH_SURAH = new Set([1, 2, 50, 77, 128, 151, 177, 187, 208, 249, 262, 282, 305, 322, 332, 342, 350, 367, 377, 411,
   415, 418, 428, 446, 453, 477, 483, 496, 499, 507, 511, 518, 526, 542, 549, 553, 556, 558, 560, 562, 572, 574, 582, 585, 586,
@@ -42,6 +44,13 @@ const Mushaf = {
     if (first < 0) return this.surahAt(page);
     return OPENS_WITH_SURAH.has(page) ? first + 1 : first;
   },
+  // The surahs on a page: the one of the first line, then every surah starting on it.
+  surahsOn(page) { const out = []; for (let n = this.surahAtTop(page); n <= this.surahAt(page); n++) out.push(n); return out; },
+  hizbAt(page) { let h = 0; HIZB_START.forEach((p, i) => { if (p <= page) h = i + 1; }); return h; },
+  // Browsing by unit: "page" | "surah" | "hizb" | "juz" (core Mushaf.next / previous).
+  starts(u) { return u === "surah" ? [...new Set(SURAH_START)] : u === "hizb" ? HIZB_START : u === "juz" ? JUZ_START : Array.from({ length: PAGES }, (_, i) => i + 1); },
+  next(u, page) { const s = this.starts(u).find((p) => p > page); return s === undefined ? null : s; },
+  previous(u, page) { const s = this.starts(u); let i = -1; s.forEach((p, k) => { if (p <= page) i = k; }); return i >= 1 ? s[i - 1] : null; },
   juzAt(page) { let j = 0; JUZ_START.forEach((p, i) => { if (p <= page) j = i + 1; }); return j; },
   name(n, lang) { return (lang === "fr" ? SURAH_FR : SURAH_AR)[n - 1]; },
   range(from, to, lang) {
@@ -50,10 +59,21 @@ const Mushaf = {
   },
 };
 
-// n parts of 604 div n pages, the last one + the remainder.
-function splitParts(n) {
-  const q = Math.floor(PAGES / n);
-  return Array.from({ length: n }, (_, i) => { const f = i * q + 1; return [f, i === n - 1 ? PAGES : f + q - 1]; });
+// [from, to] split between n readers as equally as possible: the first (total mod n) parts one page more
+// (604 / 55 = 54 × 11 + 1 × 10). Same as core Parts.split and the server's khatma_redistribute.
+function splitParts(n, from = 1, to = PAGES) {
+  const total = to - from + 1, q = Math.floor(total / n), r = total % n;
+  let f = from;
+  return Array.from({ length: n }, (_, i) => { const t = f + q - 1 + (i < r ? 1 : 0); const out = [f, t]; f = t + 1; return out; });
+}
+// '0'/'1' string of 604 → [[from, to], …] of its '1' pages («صفحاتي الناقصة»).
+function bitRanges(bits) {
+  const out = []; let start = 0;
+  for (let p = 1; p <= PAGES + 1; p++) {
+    const on = p <= PAGES && bits && bits[p - 1] === "1";
+    if (on && !start) start = p; else if (!on && start) { out.push([start, p - 1]); start = 0; }
+  }
+  return out;
 }
 
 // coverage = '0'/'1' string of 604 (page 1 first), as the server's bit(604).

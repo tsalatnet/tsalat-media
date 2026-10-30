@@ -2,9 +2,12 @@
 // الورد = «portion», الختمة = «khatma», الحلقة = «cercle», المشرف = «administrateur».
 "use strict";
 const LTR = (x) => "⁦" + x + "⁩";   // a number inside Arabic text stays left-to-right
+// A page range in the reading direction: Arabic starts on the right (RTL isolate of LTR numbers).
+const RNG = (a, b) => "⁧" + LTR(a) + " – " + LTR(b) + "⁩";
 
 const T = {
   ar: {
+    rng: RNG,
     dir: "rtl", back: "→", pct: "٪",
     appName: "ختمة جماعية", tagline: "نقرأ معًا… ونختم القرآن معًا",
     cancel: "إلغاء", save: "حفظ", del: "حذف", join: "انضمام", retry: "إعادة المحاولة", hello: "السلام عليكم",
@@ -24,7 +27,7 @@ const T = {
     iAmAdmin: "🔑  أنا مشرف", adminMode: "وضع المشرف", adminCodeAsk: "أدخل رمز المشرف الذي سُلّم إليك.", enable: "تفعيل",
     tabMine: "وردي", tabAdmin: "الإدارة", myPortion: "وردي",
     fromSurah: (s) => `من ${s}`, toSurah: (s) => `إلى ${s}`,
-    pagesLine: (f, t, n) => `الصفحات ${LTR(f + " – " + t)} · ${LTR(n)} صفحة`,
+    pagesLine: (f, t, n) => `الصفحات ${RNG(f, t)} · ${LTR(n)} صفحة`,
     readersDone: (d, t) => `القرّاء: ${LTR(d + "/" + t)} أتمّوا أورادهم`,
     startReading: "ابدأ القراءة", continueReading: (p) => `واصل القراءة · ص ${LTR(p)}`, doneWaiting: "✓ أتممت وردك · في انتظار البقية",
     noPortion: "لا ورد لك الآن", inGroupOf: (a) => `أنت في مجموعة ${a}. `, notifiedNext: "يظهر وردك هنا حين تبدأ الختمة القادمة.",
@@ -36,7 +39,7 @@ const T = {
     browseMushaf: "📖  تصفّح المصحف كاملًا", history: "ختماتي السابقة", incomplete: "ناقصة",
     khatmDua: "دعاء ختم القرآن", surahTitle: (s) => `سورة ${s}`, juzPage: (j, p) => `الجزء ${LTR(j)} · الصفحة ${LTR(p)}`,
     iFinished: "✓  أتممت وردي", finishedAccepted: "✓ وردك مُتمّ · تقبّل الله", confirmTitle: "أتممت وردك؟",
-    confirmAtEnd: (f, t) => `الصفحات ${LTR(f + " – " + t)}. سيُبلَّغ المشرف بإتمامه.`,
+    confirmAtEnd: (f, t) => `الصفحات ${RNG(f, t)}. سيُبلَّغ المشرف بإتمامه.`,
     confirmEarly: (t) => `لم تصل بعدُ إلى آخر صفحة (${LTR(t)}). هل قرأت وردك كاملًا فعلًا (من مصحف آخر مثلًا)؟`,
     yesFinished: "نعم، أتممته", notYet: "ليس بعد", khatmTitle: "🌟 ختمتَ القرآن كاملًا",
     khatmText: "بتداول الأوراد أتممت قراءة القرآن الكريم كاملًا. اللهم اجعل القرآن ربيع قلبك.",
@@ -60,7 +63,7 @@ const T = {
     khatmaOfCircle: (n, r) => `الختمة ${LTR(n)} للحلقة · ${LTR(r)} قارئ`, startedAt: (t) => `بدأت ${t}`,
     leftWithDeadline: (l, h) => `⏳ تبقّى ${l} (مهلة ${LTR(h)} ساعة)`, closedIncomplete: (t) => `أُنهيت ناقصة · ${t}`, closedComplete: (t) => `✓ تمّت · ${t}`,
     readersTitle: "القرّاء", remind: "⏰  تذكير", reminded: (n) => `أُرسل التذكير إلى ${LTR(n)}`, closeKhatma: "إنهاء الختمة",
-    nextKhatma: "▶  الختمة الموالية لهذه الحلقة", portion: "الورد", pagesRange: (f, t) => `الصفحات ${LTR(f + " – " + t)}`,
+    nextKhatma: "▶  الختمة الموالية لهذه الحلقة", portion: "الورد", pagesRange: (f, t) => `الصفحات ${RNG(f, t)}`,
     markDone: "✓  تسجيله مُتمًّا (قرأه دون التطبيق)", reassignTitle: "إسناده إلى قارئ آخر", noReaderFree: "لا يوجد قارئ متاح الآن.",
     finishedHere: "أتمّ ورده في هذه الختمة", free: "متاح", closeTitle: (id) => `إنهاء الختمة ${LTR(id)}؟`,
     closeAllDone: "اكتملت كل الأوراد. سيُبلَّغ القرّاء بتمام الختمة ويصبحون متاحين للختمة القادمة.",
@@ -81,7 +84,21 @@ const T = {
     wChooseCircle: "اختر الحلقة", wReadersDeadline: "القرّاء والمهلة", wDistribution: "توزيع الأوراد", wStarted: "بدأت الختمة",
     wNotified: "أُرسل إلى كل قارئ إشعار بورده.", follow: "متابعة الختمة",
     circleNextKhatma: (r, n) => `${LTR(r)} قارئ · الختمة ${LTR(n)}`, circleBusy: (id) => `لها ختمة جارية (${LTR(id)})`, deadline: "المهلة",
-    eachPortion: (q, l) => `كل ورد ${LTR(q)} صفحة` + (l ? `، والأخير ${LTR(l)}` : ""), participating: (id) => `مشارك في ${LTR(id)}`,
+    eachPortion: (a, b) => a === b ? `كل ورد ${LTR(a)} صفحة` : `كل ورد ${LTR(b)} أو ${LTR(a)} صفحة (توزيع متساوٍ)`,
+    stGiven: "وُزّع", pageOfMushaf: (p, hz, j) => `الصفحة ${LTR(p)} من ${LTR(604)} · الحزب ${LTR(hz)} · الجزء ${LTR(j)}`,
+    units: { page: "صفحة", surah: "سورة", hizb: "حزب", juz: "جزء" },
+    unitHere: (u, p) => u === "page" ? `الصفحة ${LTR(p)}` : u === "surah" ? `سورة ${Mushaf.name(Mushaf.surahAt(p), "ar")}`
+      : u === "hizb" ? `الحزب ${LTR(Mushaf.hizbAt(p))}` : `الجزء ${LTR(Mushaf.juzAt(p))}`,
+    prevUnit: "→ السابق", nextUnit: "التالي ←", navTitle: "البحث في المصحف", pageNumber: "رقم الصفحة (1 – 604)", goTo: "اذهب",
+    searchSurah: "اسم السورة أو رقمها",
+    inPortion: (p, t) => `وردي: ${LTR(p + "/" + t)}`, passedLeft: (a, b) => `مضت ${LTR(a)} · بقيت ${LTR(b)}`,
+    khatmaPages: (d) => `قُرئ من الختمة ${LTR(d + "/604")} صفحة`, givenNote: (c, t) => `وُزّعت الصفحات ${RNG(c, t)} على إخوة آخرين`,
+    helperNote: "ورد إضافي لإتمام الختمة", givenWaiting: "وُزّع باقي وردك", missedTitle: "صفحاتي الناقصة",
+    missedText: (n) => `${LTR(n)} صفحة أُسندت إليك ولم تُقرأ بعد (وُزّعت على غيرك أو أُغلقت الختمة قبل إتمامها). اقرأها متى شئت لتكتمل ختمتك الشخصية.`,
+    readThem: "اقرأ", catchupDone: "✓  قرأتُ هذه الصفحات", catchupTitle: "قراءة الصفحات الناقصة",
+    catchupConfirm: (f, t) => `هل قرأت الصفحات ${RNG(f, t)}؟ تُضاف إلى ختمتك الشخصية.`,
+    catchupSaved: (n) => `أُضيفت ${LTR(n)} صفحة إلى ختمتك الشخصية. تقبّل الله منك.`,
+    participating: (id) => `مشارك في ${LTR(id)}`,
     readInCycle: (n) => `قرأ ${LTR(n)} صفحة في دورته`, nextDistribution: "التالي: توزيع الأوراد",
     summary: (r, h) => `${LTR(r)} قارئ · مهلة ${LTR(h)} ساعة`,
     distributionExplained: "وُزّعت الأوراد بالتداول: يأخذ كل قارئ صفحات لم يقرأها بعدُ في دورته.",
@@ -109,6 +126,7 @@ const T = {
     },
   },
   fr: {
+    rng: (a, b) => `${a}–${b}`,
     dir: "ltr", back: "←", pct: "%",
     appName: "Khatma collective", tagline: "Lisons ensemble… et terminons le Coran ensemble",
     cancel: "Annuler", save: "Enregistrer", del: "Supprimer", join: "Rejoindre", retry: "Réessayer", hello: "Assalamou alaykoum",
@@ -188,7 +206,21 @@ const T = {
     wChooseCircle: "Choisir le cercle", wReadersDeadline: "Lecteurs et délai", wDistribution: "Répartition des portions",
     wStarted: "Khatma lancée", wNotified: "Chaque lecteur a reçu une notification avec sa portion.", follow: "Suivre la khatma",
     circleNextKhatma: (r, n) => `${r} lecteur(s) · khatma n° ${n}`, circleBusy: (id) => `Khatma en cours (${id})`, deadline: "Délai",
-    eachPortion: (q, l) => `${q} pages par portion` + (l ? `, la dernière : ${l}` : ""), participating: (id) => `Participe à ${id}`,
+    eachPortion: (a, b) => a === b ? `${a} pages par portion` : `${b} ou ${a} pages par portion (répartition égale)`,
+    stGiven: "Partagée", pageOfMushaf: (p, hz, j) => `Page ${p} sur 604 · hizb ${hz} · juz' ${j}`,
+    units: { page: "Page", surah: "Sourate", hizb: "Hizb", juz: "Juz'" },
+    unitHere: (u, p) => u === "page" ? `Page ${p}` : u === "surah" ? `Sourate ${Mushaf.name(Mushaf.surahAt(p), "fr")}`
+      : u === "hizb" ? `Hizb ${Mushaf.hizbAt(p)}` : `Juz' ${Mushaf.juzAt(p)}`,
+    prevUnit: "Précédent →", nextUnit: "← Suivant", navTitle: "Rechercher dans le mushaf", pageNumber: "Numéro de page (1 – 604)", goTo: "Aller",
+    searchSurah: "Nom ou numéro de la sourate",
+    inPortion: (p, t) => `Ma portion : ${p}/${t}`, passedLeft: (a, b) => `${a} lue${a > 1 ? "s" : ""} · reste ${b}`,
+    khatmaPages: (d) => `Khatma : ${d}/604 pages lues`, givenNote: (c, t) => `Pages ${c}–${t} confiées à d'autres membres`,
+    helperNote: "Portion supplémentaire pour compléter la khatma", givenWaiting: "Le reste de votre portion a été partagé", missedTitle: "Mes pages manquantes",
+    missedText: (n) => `${n} pages qui vous étaient confiées et pas encore lues (partagées avec d'autres ou khatma clôturée avant la fin). Lisez-les quand vous voulez pour compléter votre khatma personnelle.`,
+    readThem: "Lire", catchupDone: "✓  J'ai lu ces pages", catchupTitle: "Lecture des pages manquantes",
+    catchupConfirm: (f, t) => `Avez-vous lu les pages ${f}–${t} ? Elles s'ajoutent à votre khatma personnelle.`,
+    catchupSaved: (n) => `${n} page${n > 1 ? "s" : ""} ajoutée${n > 1 ? "s" : ""} à votre khatma personnelle. Qu'Allah l'accepte de vous.`,
+    participating: (id) => `Participe à ${id}`,
     readInCycle: (n) => `${n} pages lues dans son cycle`, nextDistribution: "Suivant : répartition des portions",
     summary: (r, h) => `${r} lecteur(s) · délai ${h} h`,
     distributionExplained: "Répartition par rotation : chaque lecteur reçoit des pages qu'il n'a pas encore lues dans son cycle.",
