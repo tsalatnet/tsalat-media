@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.4";
+const VERSION = "1.6";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -67,6 +67,7 @@ async function reload() {
   st.me = me;
   if (me.lang !== st.lang) rpc("khatma_set_lang", auth({ p_lang: st.lang })).catch(() => {});
   // No push in the iPhone web app: the admin sees «📱 آيفون» instead of a silent failure.
+  if (!reload.hello) rpc("khatma_hello", auth({ p_version: "web " + VERSION })).then(() => (reload.hello = true)).catch(() => {});
   if (!reload.pushSent) rpc("khatma_set_push", auth({ p_platform: "ios-web", p_sub: null, p_ok: false })).then(() => (reload.pushSent = true)).catch(() => {});
   if (me.is_admin && (!st.ov || st.adminTab || st.stack.length)) st.ov = await rpc("khatma_admin_overview", auth());
   st.phase = !me.name ? "name" : !(me.is_admin || me.links.some((l) => l.status === "accepted")) ? "gate" : "home";
