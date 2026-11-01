@@ -69,7 +69,10 @@ async function reload() {
   // No push in the iPhone web app: the admin sees «📱 آيفون» instead of a silent failure.
   if (!reload.hello) rpc("khatma_hello", auth({ p_version: "web " + VERSION })).then(() => (reload.hello = true)).catch(() => {});
   if (!reload.pushSent) rpc("khatma_set_push", auth({ p_platform: "ios-web", p_sub: null, p_ok: false })).then(() => (reload.pushSent = true)).catch(() => {});
-  if (me.is_admin && (!st.ov || st.adminTab || st.stack.length)) st.ov = await rpc("khatma_admin_overview", auth());
+  if (me.is_admin && (!st.ov || st.adminTab || st.stack.length)) {
+    st.ov = await rpc("khatma_admin_overview", auth());
+    try { st.recov = await rpc("khatma_recover_list", auth()); } catch {}
+  }
   st.phase = !me.name ? "name" : !(me.is_admin || me.links.some((l) => l.status === "accepted")) ? "gate" : "home";
   const code = store.get("invite");
   if (me.name && code) {
@@ -83,6 +86,14 @@ async function reload() {
     try { const r = await rpc("khatma_request_join", auth()); st.me = await rpc("khatma_me", auth()); if (r.sent > 0) joinSent(r.admin); } catch (e) {}
   }
 }
+// An admin accepted the recovery: this phone's token now belongs to the former number.
+async function followMovedNumber() {
+  const id = await rpc("khatma_whoami", { p_token: token() });
+  if (!id) return false;
+  store.set("user", id); reload.hello = false; reload.pushSent = false;
+  await reload(); toast(t().numberRecovered(id));
+  return true;
+}
 function joinSent(admin) { st.dialog = { title: t().joinSentTitle, text: t().joinSentText(h(admin), st.me.id), cancelLabel: t().ok }; }
 async function start() {
   st.phase = "loading"; render();
@@ -91,15 +102,17 @@ async function start() {
     try { await reload(); }
     catch (e) {
       if (!String(e.raw).startsWith("khatma_denied")) throw e;
-      store.set("user", null); store.set("token", null);          // database reset: new number
-      store.set("user", await rpc("khatma_register", { p_token: token() }));
-      await reload();
+      if (!(await followMovedNumber())) {
+        store.set("user", null); store.set("token", null);        // account removed, database reset: new number
+        store.set("user", await rpc("khatma_register", { p_token: token() }));
+        await reload();
+      }
     }
   } catch (e) { if (!st.me) st.phase = "offline"; toast(errorText(e)); }
   render();
 }
 async function refresh(withRender = true) {
-  try { await reload(); } catch {}
+  try { await reload(); } catch (e) { if (String(e.raw).startsWith("khatma_denied")) await followMovedNumber().catch(() => {}); }
   if (withRender && !(topS() && topS().s === "reader")) render();
 }
 const topS = () => st.stack[st.stack.length - 1];
@@ -150,7 +163,8 @@ function vName() {
   return `${hero(t().welcome, t().tagline, badge(userId(), t().yourNumber))}<main>
     <p class="mut">${t().numberExplained}</p><h2>${t().whatName}</h2><p class="mut">${t().nameShown}</p>
     <input id="name" maxlength="40" placeholder="${t().nameField}" autocomplete="name">
-    ${btn(t().continueBtn, "setName", "", "wide")}</main>`;
+    ${btn(t().continueBtn, "setName", "", "wide")}
+    <div class="center">${btn(t().recoverAsk, "recoverDialog", "", "text")}</div></main>`;
 }
 function vGate() {
   const me = st.me, pending = me.links.find((l) => l.status === "pending");
@@ -159,6 +173,7 @@ function vGate() {
     ${pending ? "" : `<div class="card"><h3>${t().step1}</h3><p class="mut">${t().step1Text(me.id)}</p>${btn(t().requestJoinBtn, "requestJoin", "", "wide")}</div>`}
     <div class="card"><h3>${t().step2}</h3><p class="mut">${t().step2Text}</p>
       <div class="row"><input id="code" class="code" maxlength="6" placeholder="ABC123" autocapitalize="characters">${btn(t().join, "join", "", "tonal")}</div></div>
+    <div class="center">${btn(t().recoverAsk, "recoverDialog", "", "text")}</div>
     <div class="center">${btn(t().iAmAdmin, "adminDialog", "", "text")}</div></main>`;
 }
 function vHome() {
@@ -248,6 +263,8 @@ function vMembers() {
   const ov = st.ov;
   let out = ov.invite_code ? `<div class="card hl2"><small>${t().inviteCode}</small><div class="bigcode">${LTR(ov.invite_code)}</div>
     <p class="sm">${t().inviteCodeText}</p>${btn(t().shareInvite, "shareInvite", "", "wide")}</div>` : "";
+  if (st.recov && st.recov.length) out += `<h4>${t().recoveriesCount(st.recov.length)}</h4>` + st.recov.map((r) => `<div class="card hl">${memberName(r.target, r.target_name)}<p class="b">${t().recoveryAsks(h(r.name))}</p><p class="xs">${t().recoveryCheck}</p>
+    <div class="row">${btn(t().refuse, "answerRecovery", r.id + ":0", "text red")}${btn(t().accept, "answerRecovery", r.id + ":1")}</div></div>`).join("");
   if (ov.requests.length) out += `<h4>${t().requestsCount(ov.requests.length)}</h4>` + ov.requests.map((r) => `<div class="card hl row sp"><div>${memberName(r.id, r.name)}<p class="xs">${dateTime(r.at)}</p></div>
     <div class="row">${btn(t().refuse, "answer", r.id + ":0", "text red")}${btn(t().accept, "answer", r.id + ":1")}</div></div>`).join("");
   out += `<h4>${t().addByNumber}</h4><div class="row"><input id="addnum" inputmode="numeric" maxlength="5" placeholder="${t().number}">${btn(t().add, "addMember", "", "tonal")}</div>
@@ -260,13 +277,16 @@ function vKhatmaDetail(id) {
   const k = st.ov && st.ov.khatmas.find((x) => x.id === id);
   if (!k) return sub(id) + `<div class="center"><div class="spin"></div></div>`;
   const done = k.parts.filter((p) => p.status === "done").length, late = ts(k.deadline) && Date.now() > ts(k.deadline), active = k.status === "active";
-  const circle = st.ov.circles.find((c) => c.id === k.circle_id);
+  const circle = st.ov.circles.find((c) => c.id === k.circle_id), unfinished = k.parts.filter((p) => p.status !== "done");
   return sub(id) + `<main><div class="card"><div class="row gap">${ring(done / k.parts.length, 92, "var(--ok)", `<b>${LTR(done + "/" + k.parts.length)}</b>`)}
     <div><h2>${h(k.circle)}</h2><p class="mut sm">${t().khatmaOfCircle(k.round + 1, k.parts.length)}</p><p class="mut sm">${t().startedAt(dateTime(k.created_at))}</p>
     ${active ? `<b class="${late ? "lt" : "pr"} sm">${remaining(k.deadline) ? t().leftWithDeadline(remaining(k.deadline), k.hours) : "⌛ " + t().deadlinePassed}</b>`
       : `<b class="${k.incomplete ? "st" : "ok"} sm">${k.incomplete ? t().closedIncomplete(dateTime(k.closed_at)) : t().closedComplete(dateTime(k.closed_at))}</b>`}</div></div>
     ${bar(k.parts, active && late)}</div><h4>${t().readersTitle}</h4>
-    ${desc(k.parts, (p) => p.user_id).map((p) => { const n = p.to - p.from + 1, read = p.status === "done" ? n : p.last_page ? p.last_page - p.from + 1 : 0;
+    <div class="row">${btn(t().filterAll(new Set(k.parts.map((p) => p.user_id)).size), "unfinished", "", st.unfinishedOnly ? "text" : "tonal")}${btn(t().filterUnfinished(new Set(unfinished.map((p) => p.user_id)).size), "unfinished", "1", st.unfinishedOnly ? "tonal" : "text")}</div>
+    ${st.unfinishedOnly && !unfinished.length ? `<p class="ok b">${t().allFinished}</p>` : ""}
+    ${st.unfinishedOnly && unfinished.length && active ? btn(t().sendList, "nudge", k.id, "tonal wide") : ""}
+    ${desc(st.unfinishedOnly ? unfinished : k.parts, (p) => p.user_id).map((p) => { const n = p.to - p.from + 1, read = p.status === "done" ? n : p.last_page ? p.last_page - p.from + 1 : 0;
       return `<div class="card ${active && p.status !== "done" ? "tap" : ""}" ${active && p.status !== "done" ? `data-a="sheet" data-x="${k.id}#${p.idx}"` : ""}>
       <div class="row sp"><div>${memberName(p.user_id, p.name)}<p class="mut sm">${t().pagesShort} ${t().rng(p.from, p.to)} · ${h(Mushaf.range(p.from, p.to, st.lang))}</p></div>${statusChip(p.given ? "given" : p.status, active && late && p.status !== "done")}</div>
       ${p.given && p.cut ? `<p class="st xs">🔀 ${t().givenNote(p.cut, p.to)}</p>` : ""}
@@ -457,7 +477,7 @@ function render() {
   else if (!sc) v = vHome();
   else v = { settings: vSettings, about: vAbout, khatma: () => vKhatmaDetail(sc.id), circle: () => vCircleEdit(sc.id), create: vCreate }[sc.s]();
   // Keep what the person is typing across re-renders.
-  const keep = {}; app.querySelectorAll("input[id]").forEach((i) => (keep[i.id] = i.value));
+  const keep = {}; app.querySelectorAll("input[id],textarea[id]").forEach((i) => (keep[i.id] = i.value));
   app.innerHTML = v + vDialog() + vSheet() + (st.toast ? `<div class="toast">${h(st.toast)}</div>` : "");
   Object.entries(keep).forEach(([id, val]) => { const i = document.getElementById(id); if (i && i.type !== "checkbox") i.value = val; });
 }
@@ -478,6 +498,9 @@ const A = {
   requestJoin() { act(async () => { const r = await rpc("khatma_request_join", auth()); await reload(); joinSent(r.admin); }); },
   join() { const c = val("code").toUpperCase(); if (c.length !== 6) return;
     act(async () => { const r = await rpc("khatma_join", auth({ p_code: c })); await reload(); toast(r.status === "accepted" ? t().memberOf(r.admin) : t().requestSent(r.admin)); }); },
+  recoverDialog() { st.dialog = { title: t().recoverAsk, text: t().recoverText, okLabel: t().recoverSend,
+    body: `<input id="acode" inputmode="numeric" maxlength="5" placeholder="${t().recoverNumber}"><input id="rname" maxlength="40" placeholder="${t().nameField}">`,
+    ok: (num, name) => act(async () => { const r = await rpc("khatma_recover_request", auth({ p_number: +num, p_name: name })); st.dialog = { title: t().joinSentTitle, text: t().recoverSent(h(r.admin)), cancelLabel: t().ok }; }) }; render(); },
   adminDialog() { st.dialog = { title: t().adminMode, text: t().adminCodeAsk, body: `<input id="acode" placeholder="KH-XXXX" autocapitalize="characters">`, okLabel: t().enable,
     ok: (code) => act(async () => { await rpc("khatma_admin_enable", auth({ p_code: code.toUpperCase() })); await reload(); st.ov = await rpc("khatma_admin_overview", auth()); st.adminTab = true; }, () => t().adminEnabled) }; render(); },
   syncAsk() { st.dialog = { title: t().sync, text: t().syncText, okLabel: t().syncOk,
@@ -485,7 +508,7 @@ const A = {
   closeAdminAsk() { st.dialog = { title: t().closeAdmin, text: t().closeAdminText, okLabel: t().closeAdminOk,
     ok: () => act(async () => { await rpc("khatma_admin_logout", auth()); st.adminTab = false; st.ov = null; st.stack = []; await reload(); }, () => t().adminClosed) }; render(); },
   dclose() { st.dialog = null; st.sheet = null; render(); },
-  dok() { const d = st.dialog, typed = val("acode"); st.dialog = null; render(); d.ok(typed); },   // read the dialog input before it closes
+  dok() { const d = st.dialog, typed = val("acode"), typed2 = val("rname"); st.dialog = null; render(); d.ok(typed, typed2); },   // read the dialog input before it closes
   tab(x) { st.adminTab = x === "1"; if (st.adminTab) refresh(); render(); },
   section(x) { st.adminSection = +x; render(); },
   push(x) { push({ s: x }); },
@@ -511,7 +534,16 @@ const A = {
         st.dialog = { title: r.khatm ? t().khatmTitle : t().acceptedTitle, text: r.khatm ? t().khatmText : t().acceptedText, okLabel: t().alhamdulillah, cancel: false,
           ok: () => { closeReader(); st.stack.pop(); render(); } }; }) }; render(); },
   // admin
-  khatma(x) { push({ s: "khatma", id: x }); },
+  khatma(x) { st.unfinishedOnly = false; push({ s: "khatma", id: x }); },
+  unfinished(x) { st.unfinishedOnly = x === "1"; render(); },
+  // The share sheet of iOS: the admin picks Messenger, then the group, there.
+  nudge(x) { const k = st.ov.khatmas.find((q) => q.id === x), byUser = new Map();
+    k.parts.filter((p) => p.status !== "done").forEach((p) => { const u = byUser.get(p.user_id) || { name: p.name, left: 0 };
+      u.left += p.to - p.from + 1 - (p.last_page ? p.last_page - p.from + 1 : 0); byUser.set(p.user_id, u); });
+    const lines = [...byUser].sort((a, b) => b[0] - a[0]).map(([id, u]) => t().nudgeLine(id, u.name, u.left));
+    st.dialog = { title: t().nudgeTitle, text: t().nudgeHint, okLabel: t().nudgeSend,
+      body: `<textarea id="acode" class="nudge" rows="10">${h(t().nudgeMessage(k.circle, remaining(k.deadline), lines))}</textarea>`,
+      ok: (text) => { if (text) share(text); } }; render(); },
   khatmaReplace(x) { st.stack.pop(); push({ s: "khatma", id: x }); },
   circle(x) { st.circleSel = null; push({ s: "circle", id: x === "" ? null : +x }); },
   csel(x) { const cs = st.circleSel, id = +x, i = cs.sel.indexOf(id); cs.name = val("cname"); if (i >= 0) cs.sel.splice(i, 1); else cs.sel.push(id); render(); },
@@ -538,6 +570,7 @@ const A = {
   closeAsk(x) { const k = st.ov.khatmas.find((q) => q.id === x), left = k.parts.filter((p) => p.status !== "done").length;
     st.dialog = { title: t().closeTitle(x), text: left ? t().closeNotAll(left) : t().closeAllDone, okLabel: t().close,
       ok: () => act(async () => { await rpc("khatma_close", auth({ p_khatma: x })); st.ov = await rpc("khatma_admin_overview", auth()); st.me = await rpc("khatma_me", auth()); }, () => t().khatmaClosed) }; render(); },
+  answerRecovery(x) { const [id, ok] = x.split(":"); act(async () => { await rpc("khatma_recover_answer", auth({ p_id: +id, p_accept: ok === "1" })); st.ov = await rpc("khatma_admin_overview", auth()); st.recov = await rpc("khatma_recover_list", auth()); }, () => ok === "1" ? t().accepted : t().refused); },
   answer(x) { const [id, ok] = x.split(":"); act(async () => { await rpc("khatma_link_answer", auth({ p_member: +id, p_accept: ok === "1" })); st.ov = await rpc("khatma_admin_overview", auth()); }, () => ok === "1" ? t().accepted : t().refused); },
   addMember() { const n = +val("addnum"); if (!n) return;
     act(async () => { const r = await rpc("khatma_link_add", auth({ p_member: n })); st.ov = await rpc("khatma_admin_overview", auth()); toast(t().added(n + " · " + (r.name || "—"))); }); },
