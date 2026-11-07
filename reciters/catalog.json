@@ -3,57 +3,68 @@
   {
    "id": "abdulbasit",
    "name": "عبد الباسط عبد الصمد",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-abdulbasit/abdulbasit.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-abdulbasit/abdulbasit.zip",
+   "size": 316162648
   },
   {
    "id": "husary",
    "name": "محمود خليل الحصري",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-husary/husary.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-husary/husary.zip",
+   "size": 235044626
   },
   {
    "id": "tablawi",
    "name": "محمد محمود الطبلاوي",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-tablawi/tablawi.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-tablawi/tablawi.zip",
+   "size": 491427431
   },
   {
    "id": "ahmedajmi",
    "name": "أحمد العجمي",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-ahmedajmi/ahmedajmi.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-ahmedajmi/ahmedajmi.zip",
+   "size": 371638779
   },
   {
    "id": "ghamidi",
    "name": "سعد الغامدي",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-ghamidi/ghamidi.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-ghamidi/ghamidi.zip",
+   "size": 138915742
   },
   {
    "id": "hudhaifi",
    "name": "علي الحذيفي",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-hudhaifi/hudhaifi.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-hudhaifi/hudhaifi.zip",
+   "size": 147969357
   },
   {
    "id": "banna",
    "name": "محمد أحمد البنّا",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-banna/banna.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-banna/banna.zip",
+   "size": 387430306
   },
   {
    "id": "jalnam",
    "name": "خالد الجلنام",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-jalnam/jalnam.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-jalnam/jalnam.zip",
+   "size": 144575270
   },
   {
    "id": "minshawi",
    "name": "محمد صديق المنشاوي",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-minshawi/minshawi.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-minshawi/minshawi.zip",
+   "size": 159683905
   },
   {
    "id": "rikbawi",
    "name": "محمد الركباوي",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-rikbawi/rikbawi.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-rikbawi/rikbawi.zip",
+   "size": 117665751
   },
   {
    "id": "dawsari",
    "name": "ياسر الدوسري",
-   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-dawsari/dawsari.zip"
+   "url": "https://github.com/tsalatnet/tsalat-media/releases/download/reciter-dawsari/dawsari.zip",
+   "size": 141033392
   }
  ]
 }
