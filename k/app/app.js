@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.7";
+const VERSION = "1.8";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -36,7 +36,7 @@ const auth = (extra = {}) => ({ p_user: userId(), p_token: token(), ...extra });
 // ─── state ───
 const st = {
   lang: store.get("lang", "ar"), phase: "loading", me: null, ov: null, busy: false,
-  stack: [], adminTab: false, adminSection: 0, dialog: null, toast: null, wiz: null, sheet: null,
+  stack: [], adminTab: false, tab: "0", offline: false, pdraft: null, adminSection: 0, dialog: null, toast: null, wiz: null, sheet: null,
 };
 const t = () => T[st.lang];
 const h = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -64,7 +64,8 @@ function errorText(e) { const raw = (e && e.raw) || "other"; const k = raw.split
 // ─── data ───
 async function reload() {
   const me = await rpc("khatma_me", auth());
-  st.me = me;
+  st.me = me; st.offline = false;
+  store.set("me", JSON.stringify(me));          // shown again when the app opens without internet
   if (me.lang !== st.lang) rpc("khatma_set_lang", auth({ p_lang: st.lang })).catch(() => {});
   // No push in the iPhone web app: the admin sees «📱 آيفون» instead of a silent failure.
   if (!reload.hello) rpc("khatma_hello", auth({ p_version: "web " + VERSION })).then(() => (reload.hello = true)).catch(() => {});
@@ -108,11 +109,18 @@ async function start() {
         await reload();
       }
     }
-  } catch (e) { if (!st.me) st.phase = "offline"; toast(errorText(e)); }
+  } catch (e) {
+    // No internet: the last known state of the group (banner), and the personal khatma works as usual.
+    let cached = null; try { cached = JSON.parse(store.get("me", "null")); } catch {}
+    if (!st.me && e.raw === "network" && cached && cached.id === userId()) {
+      st.me = cached; st.offline = true;
+      st.phase = !cached.name ? "offline" : !(cached.is_admin || cached.links.some((l) => l.status === "accepted")) ? "gate" : "home";
+    } else { if (!st.me) st.phase = "offline"; toast(errorText(e)); }
+  }
   render();
 }
 async function refresh(withRender = true) {
-  try { await reload(); } catch (e) { if (String(e.raw).startsWith("khatma_denied")) await followMovedNumber().catch(() => {}); }
+  try { await reload(); } catch (e) { if (e.raw === "network") st.offline = true; else if (String(e.raw).startsWith("khatma_denied")) await followMovedNumber().catch(() => {}); }
   if (withRender && !(topS() && topS().s === "reader")) render();
 }
 const topS = () => st.stack[st.stack.length - 1];
@@ -158,7 +166,10 @@ function vInstall() {
     <div class="arrow">⬇︎</div></main>`;
 }
 function vLoading() { return `${hero(t().appName, t().tagline)}<div class="center"><div class="spin"></div></div>`; }
-function vOffline() { return `${hero(t().appName, t().tagline)}<main class="center col"><div class="big">📶</div><h2>${t().offlineTitle}</h2><p class="mut">${t().offlineText}</p>${btn(t().retry, "start")}</main>`; }
+function vOffline() {
+  return `${hero(t().appName, t().tagline)}<main><div class="center col"><div class="big">📶</div><h2>${t().offlineTitle}</h2><p class="mut">${t().offlineText}</p>${btn(t().retry, "start")}</div>
+    ${vPersonalCard()}${btn(t().browseMushaf, "mushaf", "", "outline wide")}</main>`;
+}
 function vName() {
   return `${hero(t().welcome, t().tagline, badge(userId(), t().yourNumber))}<main>
     <p class="mut">${t().numberExplained}</p><h2>${t().whatName}</h2><p class="mut">${t().nameShown}</p>
@@ -178,11 +189,14 @@ function vGate() {
 }
 function vHome() {
   const me = st.me;
-  const tabs = me.is_admin ? `<nav class="tabs"><button class="${st.adminTab ? "" : "on"}" data-a="tab" data-x="0">📖<span>${t().tabMine}</span></button>
-    <button class="${st.adminTab ? "on" : ""}" data-a="tab" data-x="1">🛡️<span>${t().tabAdmin}${st.ov && st.ov.requests.length ? ` <em>${st.ov.requests.length}</em>` : ""}</span></button></nav>` : "";
+  // Bottom bar for everyone: the group's portion (default), my own khatma (dot while today's portion is unread), the admin's space.
+  const tab = st.adminTab && me.is_admin ? "1" : st.tab === "2" ? "2" : "0";
+  const tabs = `<nav class="tabs"><button class="${tab === "0" ? "on" : ""}" data-a="tab" data-x="0">👥<span>${t().tabGroup}</span></button>
+    <button class="${tab === "2" ? "on" : ""}" data-a="tab" data-x="2"><b class="dotw">📖${Personal.pending() ? `<i class="dot"></i>` : ""}</b><span>${t().tabPersonal}</span></button>
+    ${me.is_admin ? `<button class="${tab === "1" ? "on" : ""}" data-a="tab" data-x="1">🛡️<span>${t().tabAdmin}${st.ov && st.ov.requests.length ? ` <em>${st.ov.requests.length}</em>` : ""}</span></button>` : ""}</nav>`;
   return `<div class="top"><div><small>${t().hello}</small><b>${h(me.name)}</b></div><span class="pill">${t().myNumber} ${LTR(me.id)}</span>
     <button class="ic" data-a="push" data-x="settings">⚙️</button></div>
-    <main class="${me.is_admin ? "padtabs" : ""}">${me.is_admin && st.adminTab ? vAdmin() : vReaderHome()}</main>${tabs}`;
+    <main class="padtabs">${tab === "1" ? vAdmin() : tab === "2" ? vPersonalHome() : (st.offline ? `<div class="card warn"><b>📶 ${t().offlineHomeTitle}</b><p class="sm">${t().offlineHomeText}</p></div>` : "") + vReaderHome()}</main>${tabs}`;
 }
 function vReaderHome() {
   const me = st.me, active = me.parts.filter((p) => p.khatma_status === "active"), hist = me.parts.filter((p) => p.khatma_status !== "active");
@@ -354,28 +368,29 @@ function vAbout() {
 
 // ─── mushaf reader (built once; the bars are updated in place) ───
 function vReader(sc) {
-  const part = sc.part, cu = sc.catchup, first = part ? part.from : cu ? cu[0] : 1, last = part ? part.to : cu ? cu[1] : 604;
+  const part = sc.part, cu = sc.catchup, pp = sc.personal ? Personal.get() : null;
+  const first = part ? part.from : cu ? cu[0] : pp ? pp.start_page : 1, last = part ? part.to : cu ? cu[1] : 604;
   const pages = []; for (let p = first; p <= last; p++) pages.push(p); if (last === 604 && !cu) pages.push(605, 606);
-  const img = (n) => MUSHAF + (n <= 604 ? String(n).padStart(3, "0") : "dua" + (n - 604)) + ".jpg";
+  const img = mushafImg, ranged = part || cu || sc.personal;
   return `<div class="reader ${store.get("night") === "1" ? "night" : ""}" id="reader"><div class="pages" id="pages" dir="rtl">
     ${pages.map((n) => `<div class="pg" data-p="${n}"><img loading="lazy" decoding="async" src="${img(n)}" alt=""></div>`).join("")}</div>
     <div class="rtop" id="rtop"><button class="ic" data-a="back">${t().back}</button><div class="grow"><b id="rs"></b><small id="rj"></small></div>
-      ${part || cu ? "" : `<button class="ic" data-a="navOpen">🔍</button>`}<button class="ic" data-a="night">🌙</button></div>
+      ${ranged ? "" : `<button class="ic" data-a="navOpen">🔍</button>`}<button class="ic" data-a="night">🌙</button></div>
     <div class="band t" id="bt"></div><div class="band b" id="bb"></div>
-    ${part || cu ? "" : `<div class="rbot" id="rbot"><div class="units" id="units"></div><div class="navrow" id="navrow"></div></div>`}
-    ${part || cu ? `<div class="rbot" id="rbot"><div class="row"><b id="rc"></b><div class="lin grow"><i id="rl"></i></div></div><div id="rbtn"></div></div>` : ""}</div>`;
+    ${ranged ? "" : `<div class="rbot" id="rbot"><div class="units" id="units"></div><div class="navrow" id="navrow"></div></div>`}
+    ${ranged ? `<div class="rbot" id="rbot"><div class="row"><b id="rc"></b><div class="lin grow"><i id="rl"></i></div></div><div id="rbtn"></div></div>` : ""}</div>`;
 }
 function setupReader(sc) {
-  const box = document.getElementById("pages"), part = sc.part, cu = sc.catchup, ranged = !!(part || cu);
-  const key = part ? part.khatma_id + "#" + part.idx : cu ? "missed#" + cu[0] : "free";
-  const els = [...box.children], first = part ? part.from : cu ? cu[0] : 1, last = part ? part.to : cu ? cu[1] : 604;
-  let start = part ? (+store.get("page_" + key, 0) || part.last_page || first) : cu ? (+store.get("page_" + key, 0) || first) : sc.page;
+  const box = document.getElementById("pages"), part = sc.part, cu = sc.catchup, ranged = !!(part || cu), pp = sc.personal ? Personal.get() : null;
+  const key = part ? part.khatma_id + "#" + part.idx : cu ? "missed#" + cu[0] : pp ? "personal" : "free";
+  const els = [...box.children], first = part ? part.from : cu ? cu[0] : pp ? pp.start_page : 1, last = part ? part.to : cu ? cu[1] : 604;
+  let start = part ? (+store.get("page_" + key, 0) || part.last_page || first) : cu ? (+store.get("page_" + key, 0) || first) : pp ? Math.min(pp.next, 604) : sc.page;
   if (start < first || start > last) start = first;
   const idx0 = els.findIndex((e) => +e.dataset.p === start);
   requestAnimationFrame(() => { if (idx0 > 0) els[idx0].scrollIntoView({ inline: "start", block: "nearest" }); update(); });
   let hideT, sendT, cur = start;
   const chrome = (on) => { document.getElementById("reader").classList.toggle("bare", !on); clearTimeout(hideT);
-    if (on && !(ranged && cur >= last)) hideT = setTimeout(() => chrome(false), 4000); };
+    if (on && !(ranged && cur >= last) && !sc.keepBar) hideT = setTimeout(() => chrome(false), 4000); };
   function update() {
     const i = Math.round(Math.abs(box.scrollLeft) / box.clientWidth), n = +(els[Math.max(0, Math.min(els.length - 1, i))].dataset.p);
     if (n === update.last) return; update.last = n; cur = n;
@@ -396,7 +411,8 @@ function setupReader(sc) {
         ? `<button class="btn wide ${n >= last ? "gold" : "soft"}" data-a="doneAsk">${t().iFinished}</button>` : done ? `<p class="ok center">${t().finishedAccepted}</p>` : "";
       if (me.khatma_status === "active" && !done) { clearTimeout(sendT); sendT = setTimeout(() => rpc("khatma_part_progress", auth({ p_khatma: part.khatma_id, p_idx: part.idx, p_page: pg })).catch(() => {}), 4000); }
       if (n >= last) chrome(true);
-    } else if (!cu) navBar(pg);
+    } else if (pp) { sc.keepBar = personalReaderBar(sc, n); if (sc.keepBar) chrome(true); }
+    else if (!cu) navBar(pg);
     if (cu) {
       const total = last - first + 1, read = pg - first + 1;
       document.getElementById("rc").textContent = LTR(read + "/" + total);
@@ -470,6 +486,7 @@ function render() {
   app.dataset.reader = "";
   let v;
   if (isIOS() && !standalone()) v = vInstall();
+  else if (sc && sc.s === "psetup") v = vPersonalSetup();
   else if (st.phase === "loading") v = vLoading();
   else if (st.phase === "offline") v = vOffline();
   else if (st.phase === "name") v = vName();
@@ -509,7 +526,7 @@ const A = {
     ok: () => act(async () => { await rpc("khatma_admin_logout", auth()); st.adminTab = false; st.ov = null; st.stack = []; await reload(); }, () => t().adminClosed) }; render(); },
   dclose() { st.dialog = null; st.sheet = null; render(); },
   dok() { const d = st.dialog, typed = val("acode"), typed2 = val("rname"); st.dialog = null; render(); d.ok(typed, typed2); },   // read the dialog input before it closes
-  tab(x) { st.adminTab = x === "1"; if (st.adminTab) refresh(); render(); },
+  tab(x) { st.adminTab = x === "1"; st.tab = x; if (st.adminTab) refresh(); render(); window.scrollTo(0, 0); },
   section(x) { st.adminSection = +x; render(); },
   push(x) { push({ s: x }); },
   open(x) { const [k, i] = x.split("#"); const p = st.me.parts.find((q) => q.khatma_id === k && q.idx === +i); if (!p) return;

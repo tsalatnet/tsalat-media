@@ -121,3 +121,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; } .alogo { wi
 .hcard .row.sp { flex-wrap: nowrap; } .hcard .kid, .hcard .row.sp b { white-space: nowrap; flex: none; }
 .hcard .row.sp .o8 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 input.code::placeholder { text-transform: none; letter-spacing: 0; font: 400 16px -apple-system, "Segoe UI", sans-serif; }
+/* الورد الشخصي (1.8) */
+.dotw { position: relative; font-weight: normal; } .dotw .dot { position: absolute; top: -2px; inset-inline-end: -8px; width: 9px; height: 9px; border-radius: 50%; background: var(--late); }
+.prow { display: flex; gap: 12px; align-items: flex-start; } .prow.on { outline: 2px solid var(--gold); }
+.prow .radio { flex: none; width: 20px; height: 20px; margin-top: 4px; border-radius: 50%; border: 2px solid var(--muted); }
+.prow.on .radio { border-color: var(--gold); background: radial-gradient(var(--gold) 45%, transparent 50%); }
+input[type="date"] { width: auto; }
