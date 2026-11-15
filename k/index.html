@@ -87,20 +87,23 @@
   <p class="muted" style="text-align:center">الفكرة: عفيف مالك · الإنجاز: يوسف فرج<br><span class="fr">Idée : Afif Malek · Réalisation : Youssef FREJ</span></p>
 </main>
 <script>
-  // Invitation link: …/k/?c=CODE → show the code and open the app (khatma://join?c=CODE).
+  // Invitation link: …/k/?c=CODE[&r=ID] → show the code and open the app (khatma://join?c=CODE&r=ID).
+  // r = the member who shared the link («ادعُ أهلك», 15/11/2026): recorded once on the newcomer.
   const c = (new URLSearchParams(location.search).get("c") || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12);
+  const r = (new URLSearchParams(location.search).get("r") || "").replace(/\D/g, "").slice(0, 6);
+  const q = [c && "c=" + c, r && "r=" + r].filter(Boolean).join("&");
   // An iPhone gets the web app (installed from Safari), every other phone the Android APK.
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (ios) {
     document.querySelectorAll(".android").forEach((e) => e.classList.add("hide"));
     document.querySelector(".ios").classList.remove("hide");
-    document.getElementById("iosapp").href = "app/" + (c ? "?c=" + c : "");
-    if (c) { location.replace("app/?c=" + c); }
-  } else if (c) {
+    document.getElementById("iosapp").href = "app/" + (q ? "?" + q : "");
+    if (q) { location.replace("app/?" + q); }
+  } else if (q) {
     document.getElementById("invite").classList.remove("hide");
-    document.getElementById("code").textContent = c;
+    if (c) document.getElementById("code").textContent = c; else document.getElementById("code").classList.add("hide");
     document.getElementById("open").href =
-      "intent://join?c=" + c + "#Intent;scheme=khatma;package=net.tsalat.khatma;S.browser_fallback_url=" +
+      "intent://join?" + q + "#Intent;scheme=khatma;package=net.tsalat.khatma;S.browser_fallback_url=" +
       encodeURIComponent(document.getElementById("dl").href) + ";end";
   }
   fetch("version.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {

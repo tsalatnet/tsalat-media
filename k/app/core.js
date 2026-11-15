@@ -101,12 +101,21 @@ function maxAssignment(w) {
   const res = new Array(n); for (let j = 1; j <= n; j++) res[p[j] - 1] = j - 1; return res;
 }
 
-// readers in seat order [{id, name, coverage}], round = the circle's khatma counter.
-// Max of unread pages, ties broken towards the plain rotation (part (i + round) mod n).
+// readers in seat order [{id, name, coverage, last_to}], round = the circle's khatma counter (core Rotation.assign):
+// 1. as many readers as possible progress (a part holding unread pages of theirs); 2. as many as possible read on
+// (the part right after their last page, else the one holding it, else one touching their read pages); 3. fewest parts left
+// first; 4. the most unread pages; 5. the plain rotation (part (i + round) mod n). Same units as the Kotlin.
 function assignParts(readers, round) {
-  const n = readers.length, parts = splitParts(n), big = n * n + 1;
+  const n = readers.length, parts = splitParts(n);
+  const uPages = n * n + 1, uUrgency = uPages * (PAGES + 1), uContinuity = uUrgency * (2 * n + 1), uProgress = uContinuity * (3 * n + 1);
   const gain = readers.map((r) => parts.map((pt) => unread(r.coverage, pt)));
-  const w = gain.map((row, i) => row.map((g, j) => g * big - (((j - (i + round)) % n) + n) % n));
+  const remaining = gain.map((row) => row.filter((g) => g > 0).length);
+  const has = (c, p) => c[(((p - 1) % PAGES) + PAGES) % PAGES] === "1";   // the Quran as a ring
+  const w = gain.map((row, i) => { const r = readers[i], next = r.last_to == null ? null : (r.last_to % PAGES) + 1;
+    return row.map((g, j) => { const [f, t] = parts[j];
+      const cont = next != null && f === next ? 3 : next != null && f < next && next <= t ? 2 : g < t - f + 1 || has(r.coverage, f - 1) || has(r.coverage, t + 1) ? 1 : 0;
+      const urg = g === 0 ? 0 : remaining[i] <= 1 ? 2 : remaining[i] <= 3 ? 1 : 0;
+      return (g > 0 ? uProgress : 0) + cont * uContinuity + urg * uUrgency + g * uPages - (((j - (i + round)) % n) + n) % n; }); });
   const partOf = maxAssignment(w);
   return readers.map((r, i) => ({ userId: r.id, name: r.name, pages: parts[partOf[i]], unread: gain[i][partOf[i]] }));
 }

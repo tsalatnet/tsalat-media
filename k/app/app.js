@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.8";
+const VERSION = "1.10";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -63,6 +63,7 @@ function errorText(e) { const raw = (e && e.raw) || "other"; const k = raw.split
 
 // ─── data ───
 async function reload() {
+  try { PUsage.send(); } catch {}
   const me = await rpc("khatma_me", auth());
   st.me = me; st.offline = false;
   store.set("me", JSON.stringify(me));          // shown again when the app opens without internet
@@ -75,6 +76,9 @@ async function reload() {
     try { st.recov = await rpc("khatma_recover_list", auth()); } catch {}
   }
   st.phase = !me.name ? "name" : !(me.is_admin || me.links.some((l) => l.status === "accepted")) ? "gate" : "home";
+  // Brought by a member's invitation (…&r=ID): told once, the server keeps the first one (within 7 days).
+  const ref = +store.get("ref", 0);
+  if (me.name && ref && ref !== me.id) rpc("khatma_referred", auth({ p_ref: ref })).then(() => store.set("ref", null)).catch(() => {});
   const code = store.get("invite");
   if (me.name && code) {
     store.set("invite", null);
@@ -270,8 +274,70 @@ function vCircles() {
   return btn("＋  " + t().newCircle, "circle", "", "outline wide") + (ov.circles.length ? "" : `<div class="center col card"><div class="big">⭕</div><h2>${t().noCircles}</h2><p class="mut">${t().circleExplained}</p></div>`) +
     ov.circles.map((c) => `<div class="card tap" data-a="circle" data-x="${c.id}"><div class="row sp"><div><b>${h(c.name)}</b><p class="mut sm">${t().circleInfo(c.members.length, c.rounds)}</p>
       ${c.members.length ? `<p class="gold-t xs">${t().cycle(c.rounds % c.members.length, c.members.length)}</p>` : ""}</div>
-      ${c.active ? btn(t().runningLink, "khatma", c.active, "text") : btn(t().startLink, "create", c.id, "text")}</div>
+      <div class="row">${btn("📊", "cstats", c.id, "text")}${c.active ? btn(t().runningLink, "khatma", c.active, "text") : btn(t().startLink, "create", c.id, "text")}</div></div>
       ${desc(c.members).map((id) => `<div class="mt">${memberName(id, member(id)?.name, false)}</div>`).join("")}</div>`).join("");
+}
+// ─── ★ and circle statistics (1.10; same rules as the Android app, khatma_stars / khatma_circle_stats) ───
+function starsBar(sr, size = 15) {
+  if (!sr) return "";
+  if (sr.new) return `<span class="stars new">${t().starsNew}</span>`;
+  let out = "";
+  for (let i = 1; i <= 5; i++) { const f = Math.max(0, Math.min(1, sr.stars - (i - 1))); out += `<span class="st1" style="font-size:${size}px"><i style="width:${f * 100}%">★</i>★</span>`; }
+  return `<span class="stars" dir="ltr">${out}</span>`;
+}
+function starsDetail(sr) {
+  if (sr.new) return `<p>${t().starsNewText(sr.n)}</p>`;
+  const crit = [[t().critSelf, sr.self, 35], [t().critOntime, sr.ontime, 25], [t().critReact, sr.react, 15], [t().critRegular, sr.regular, 10], [t().critHelp, sr.help, 15]];
+  return `<div class="row gap">${starsBar(sr, 26)}<b>${LTR(String(sr.stars).replace(/\.0$/, "") + "/5")}</b></div><p class="mut xs">${t().starsOver(sr.n)}</p>` +
+    crit.map(([l, v, w]) => `<div class="crit"><div class="row sp"><span class="sm">${l}</span><span class="xs"><b>${LTR(Math.round(v * 100) + "%")}</b> ${LTR("×" + w)}</span></div>
+      <div class="pbar"><i style="width:${v * 100}%;background:${v >= 0.75 ? "var(--ok)" : v >= 0.45 ? "var(--st)" : "var(--late)"}"></i></div></div>`).join("") +
+    (sr.helps ? `<p class="xs gold-t">${t().starsHelps(sr.helps)}</p>` : "") + `<p class="mut xs">${t().starsHint}</p>`;
+}
+function vCircleStats(id) {
+  const c = st.cstats && st.cstats.id === id ? st.cstats.data : null;
+  const name = c ? c.circle : (st.ov.circles.find((x) => x.id === id) || {}).name || "";
+  if (!c) return sub("📊 " + h(name)) + `<div class="center"><div class="spin"></div></div>`;
+  const closed = c.khatmas.filter((k) => k.status !== "active").slice(0, 10), parts = Math.max(1, closed.reduce((a, k) => a + k.parts, 0));
+  const sum = (f) => closed.reduce((a, k) => a + k[f], 0), pct = (n) => LTR(Math.floor((n * 100) / parts) + "%");
+  const tile = (v, l, col) => `<div class="tile"><b style="color:${col}">${v}</b><small>${l}</small></div>`;
+  const durs = closed.filter((k) => k.closed_at).map((k) => (ts(k.closed_at) - ts(k.created_at)) / 3600000 / k.hours);
+  const F = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5];
+  const cs = c.curves.filter((x) => !x.active && x.points.length === F.length);
+  const typical = cs.length >= 2 ? F.map((_, i) => { const v = cs.map((x) => x.points[i]).sort((a, b) => a - b); return v.length % 2 ? v[v.length >> 1] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2; }) : null;
+  const run = c.curves.find((x) => x.active), ak = c.khatmas.find((k) => k.status === "active");
+  const upTo = ak ? F.filter((f) => f <= (Date.now() - ts(ak.created_at)) / (ak.hours * 3600000)).length : 0;
+  const W = 320, H = 170, X = (f) => (f / 1.5) * W, Y = (v) => H - v * H;
+  const path = (pts, n) => "M0," + H + pts.slice(0, n).map((v, i) => ` L${X(F[i]).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+  let verdict = "";
+  if (typical && run && upTo > 0) { const d = Math.round((run.points[upTo - 1] - typical[upTo - 1]) * 100); verdict = d >= -5 ? t().verdictAhead(d) : t().verdictBehind(-d); }
+  const chart = `<svg viewBox="0 0 ${W} ${H}" class="chart" dir="ltr">${[0.25, 0.5, 0.75, 1].map((g) => `<line x1="0" x2="${W}" y1="${Y(g)}" y2="${Y(g)}" class="grid"/>`).join("")}
+    <line x1="${X(1)}" x2="${X(1)}" y1="0" y2="${H}" class="dl"/>${typical ? `<path d="${path(typical, F.length)}" class="typ"/>` : ""}${run && upTo ? `<path d="${path(run.points, upTo)}" class="run"/>` : ""}</svg>`;
+  const ks = c.khatmas.slice(0, 15).reverse(), mx = Math.max(1, ...ks.map((k) => k.parts)), bw = W / Math.max(1, ks.length);
+  const bars = `<svg viewBox="0 0 ${W} 130" class="chart" dir="ltr">${ks.map((k, i) => { let top = 130; return [[k.self, "var(--ok)"], [k.by_admin, "var(--st)"], [k.given, "#8A8F98"]].map(([n, col]) => {
+    const hh = (130 * n) / mx; top -= hh; return `<rect x="${(i * bw + bw * 0.17).toFixed(1)}" y="${top.toFixed(1)}" width="${(bw * 0.66).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}"/>`; }).join(""); }).join("")}</svg>`;
+  const hmx = Math.max(1, ...c.hours), peak = c.hours.indexOf(Math.max(...c.hours));
+  const hours = `<svg viewBox="0 0 ${W} 90" class="chart" dir="ltr">${c.hours.map((n, hh) => `<rect x="${(hh * W) / 24 + 2}" y="${90 - (90 * n) / hmx}" width="${W / 24 - 4}" height="${(90 * n) / hmx}" fill="${n === hmx ? "var(--gold)" : "var(--primary)"}"/>`).join("")}</svg>
+    <div class="row sp xs mut" dir="ltr"><span>0</span><span>6</span><span>12</span><span>18</span><span>23</span></div>`;
+  const why = (m) => { const r = [], d = m.seen_at ? Math.floor((Date.now() - ts(m.seen_at)) / 86400000) : null;
+    if (m.recent.late >= 2) r.push(t().whyLate(m.recent.late, m.recent.parts)); if (m.recent.by_admin >= 2) r.push(t().whyByAdmin(m.recent.by_admin));
+    if (d === null || d >= 3) r.push(t().whyAbsent(d)); if (m.push_ok === false && m.push_platform !== "ios-web") r.push(t().whyNoPush);
+    if (m.stars && !m.stars.new && m.stars.stars <= 2.5) r.push(t().whyLowStars); return r; };
+  const follow = c.members.map((m) => [m, why(m)]).filter(([, r]) => r.length);
+  const rated = c.members.map((m) => m.stars).filter((x) => x && !x.new);
+  const dist = [5, 4.5, 4, 3.5, 3].map((v) => { const n = v === 3 ? rated.filter((x) => x.stars <= 3).length : rated.filter((x) => x.stars === v).length;
+    return `<div class="row gap"><span class="sm" style="width:52px">${LTR(v === 3 ? "≤ 3" : String(v))} ★</span><div class="pbar grow"><i style="width:${rated.length ? (n * 100) / rated.length : 0}%;background:var(--gold)"></i></div><span class="sm">${LTR(n)}</span></div>`; }).join("");
+  const rd = sum("app") + sum("paper") + sum("fast");
+  return sub("📊 " + h(name)) + `<main>
+    <div class="card"><b>${t().statsHealth(closed.length)}</b><div class="row sp tiles">${tile(pct(sum("self")), t().tileSelf, "var(--ok)")}${tile(pct(sum("late")), t().tileLate, "var(--late)")}${tile(pct(sum("given")), t().tileGiven, "#8A8F98")}${tile(pct(sum("by_admin")), t().tileByAdmin, "var(--st)")}</div>
+      ${durs.length ? `<p class="sm">${t().statsDuration(Math.round((durs.reduce((a, b) => a + b, 0) / durs.length) * 100), closed.filter((k) => k.incomplete).length)}</p>` : ""}
+      ${c.reminders.sent ? `<p class="sm">${t().statsReminders(c.reminders.sent, Math.floor((c.reminders.within_hour * 100) / c.reminders.sent))}</p>` : ""}
+      ${rd ? `<p class="sm">${t().statsReading(sum("app"), sum("paper"), sum("fast"))}</p>` : ""}</div>
+    <div class="card"><b>${t().statsCurve}</b><p class="mut xs">${t().statsCurveText}</p>${chart}
+      <p class="xs"><span class="dot" style="background:var(--muted)"></span> ${t().legendTypical} ${run ? `&nbsp; <span class="dot" style="background:var(--gold)"></span> ${t().legendRunning}` : ""}</p>${verdict ? `<p class="b sm">${verdict}</p>` : ""}</div>
+    <div class="card"><b>${t().statsPerKhatma}</b>${bars}<p class="xs"><span class="dot" style="background:var(--ok)"></span> ${t().tileSelf} &nbsp; <span class="dot" style="background:var(--st)"></span> ${t().tileByAdmin} &nbsp; <span class="dot" style="background:#8A8F98"></span> ${t().tileGiven}</p></div>
+    <div class="card"><b>${t().statsHours}</b><p class="mut xs">${t().statsPeak(peak)}</p>${hours}</div>
+    <h4>${t().statsFollow(follow.length)}</h4>${follow.length ? follow.map(([m, r]) => `<div class="card"><div class="row sp">${memberName(m.id, m.name)}<span data-a="starsOf" data-x="${m.id}">${starsBar(m.stars)}</span></div>${r.map((x) => `<p class="xs why">• ${x}</p>`).join("")}</div>`).join("") : `<p class="mut sm">${t().statsFollowNone}</p>`}
+    <div class="card"><b>${t().statsStars}</b>${dist}${c.members.filter((m) => m.stars && m.stars.new).length ? `<p class="mut xs">${t().statsNewcomers(c.members.filter((m) => m.stars && m.stars.new).length)}</p>` : ""}</div></main>`;
 }
 function vMembers() {
   const ov = st.ov;
@@ -283,7 +349,7 @@ function vMembers() {
     <div class="row">${btn(t().refuse, "answer", r.id + ":0", "text red")}${btn(t().accept, "answer", r.id + ":1")}</div></div>`).join("");
   out += `<h4>${t().addByNumber}</h4><div class="row"><input id="addnum" inputmode="numeric" maxlength="5" placeholder="${t().number}">${btn(t().add, "addMember", "", "tonal")}</div>
     ${btn(t().sync, "syncAsk", "", "outline wide")}<h4>${t().membersCount(ov.members.length)}</h4>` + ov.members.map((m) => `<div class="card row gap">${ring(m.coverage / 604, 44, "var(--primary)", `<small>${Math.floor((m.coverage * 100) / 604)}</small>`)}
-    <div class="grow">${memberName(m.id, m.name)}<p class="mut xs">${m.personal_khatmas ? "🌟 " + LTR(m.personal_khatmas) + " · " : ""}${m.busy ? t().inKhatma(m.busy) : t().free}</p></div>
+    <div class="grow">${memberName(m.id, m.name)}${m.stars ? `<div data-a="starsOf" data-x="${m.id}">${starsBar(m.stars)}</div>` : ""}<p class="mut xs">${m.personal_khatmas ? "🌟 " + LTR(m.personal_khatmas) + " · " : ""}${m.busy ? t().inKhatma(m.busy) : t().free}</p></div>
     ${m.id !== userId() && !m.busy ? `<button class="ic red" data-a="removeMember" data-x="${m.id}">✕</button>` : ""}</div>`).join("");
   return out;
 }
@@ -309,6 +375,8 @@ function vKhatmaDetail(id) {
     ${active ? `<div class="row">${btn(t().remind, "remind", k.id, "outline grow")}${btn(t().closeKhatma, "closeAsk", k.id, "grow")}</div>`
       : circle && !circle.active ? btn(t().nextKhatma, "next", k.circle_id, "wide") : ""}</main>`;
 }
+// The other open circle [uid] is in (not [except]): saving [except] with them moves them out of it, once confirmed.
+function otherCircle(uid, except) { return st.ov.circles.find((c) => c.id !== except && c.members.includes(uid)); }
 function vCircleEdit(id) {
   const ov = st.ov, c = ov.circles.find((x) => x.id === id);
   if (!st.circleSel || st.circleSel.id !== id) st.circleSel = { id, name: c ? c.name : "", sel: c ? [...c.members] : [] };
@@ -317,9 +385,18 @@ function vCircleEdit(id) {
     <h4>${t().readersCount(cs.sel.length)}</h4><p class="mut xs">${t().circleOrder}</p>
     ${ov.members.map((m) => { const i = cs.sel.indexOf(m.id);
       return `<label class="check"><input type="checkbox" data-a="csel" data-x="${m.id}" ${i >= 0 ? "checked" : ""}><span class="grow">${memberName(m.id, m.name)}
+      ${otherCircle(m.id, id) ? `<small class="st">${t().inOtherCircle(h(otherCircle(m.id, id).name))}</small>` : ""}
       ${m.busy ? `<small class="mut">${t().inRunningKhatma}</small>` : ""}</span>${i >= 0 ? `<b class="pr">${LTR(i + 1)}</b>` : ""}</label>`; }).join("")}
     ${c ? btn(t().deleteCircle, "circleDelAsk", c.id, "text red") : ""}
     ${btn(t().save, "circleSave", id ?? "", "wide")}</main>`;
+}
+// The deadline: any number of hours typed by the admin (the server accepts 1…2160).
+const validHours = (x) => Number.isInteger(x) && x >= 1 && x <= 2160;
+function hoursEnd(x) {
+  if (!validHours(x)) return `<span class="red">${t().hoursRange}</span>`;
+  const d = new Date(Date.now() + x * 3600000);
+  const day = d.toLocaleDateString(st.lang === "fr" ? "fr-FR" : "ar-TN-u-nu-latn", { weekday: "long" });
+  return `<span class="gold-t">${t().endsAt(day + " " + LTR(`${pad(d.getDate())}/${pad(d.getMonth() + 1)} · ${pad(d.getHours())}:${pad(d.getMinutes())}`))}</span>`;
 }
 function vCreate() {
   const w = st.wiz, ov = st.ov, c = ov.circles.find((x) => x.id === w.circle);
@@ -335,11 +412,13 @@ function vCreate() {
     const n = w.sel.length, q = n ? Math.floor(604 / n) : 0, q2 = n ? q + (604 % n ? 1 : 0) : 0;
     body = `<h2>${h(c ? c.name : "")}</h2><h4>${t().deadline}</h4><div class="chips">${[12, 24, 48, 72, 168].map((x) =>
       `<button class="fchip ${w.hours === x ? "on" : ""}" data-a="hours" data-x="${x}">${x === 168 ? t().week : t().hoursChip(x)}</button>`).join("")}</div>
-      <div class="row stepper"><button class="ic" data-a="hoursAdd" data-x="-1">−</button><b>${t().hours(w.hours)}</b><button class="ic" data-a="hoursAdd" data-x="1">+</button></div>
+      <div class="row stepper"><button class="ic" data-a="hoursAdd" data-x="-1">−</button>
+        <label class="hrs"><input id="hrs" type="number" inputmode="numeric" min="1" max="2160" value="${w.hours}"><span>${t().hoursUnit}</span></label>
+        <button class="ic" data-a="hoursAdd" data-x="1">+</button></div><p id="hrsEnd" class="sm">${hoursEnd(w.hours)}</p>
       <h4>${t().readersCount(n)}</h4>${n ? `<p class="gold-t sm">${t().eachPortion(q, q2)}</p>` : ""}
       ${w.input ? desc(w.input.members, (m) => m.id).map((m) => `<label class="check ${m.busy ? "dim" : ""}"><input type="checkbox" data-a="wsel" data-x="${m.id}" ${w.sel.includes(m.id) ? "checked" : ""} ${m.busy ? "disabled" : ""}>
         <span class="grow">${memberName(m.id, m.name)}<small class="${m.busy ? "st" : "mut"}">${m.busy ? t().participating(m.busy) : t().readInCycle((m.coverage.match(/1/g) || []).length)}</small></span></label>`).join("") : `<div class="spin"></div>`}
-      ${btn(t().nextDistribution, "wizNext", "", "wide " + (n ? "" : "off"))}`;
+      ${btn(t().nextDistribution, "wizNext", "", "wide " + (n && validHours(w.hours) ? "" : "off"))}`;
   } else {
     body = `<div class="card hl"><b>${h(c ? c.name : "")} · ${t().khatmaN((w.input ? w.input.round : 0) + 1)}</b><p class="sm">${t().summary(w.sel.length, w.hours)}</p><p class="xs">${t().distributionExplained}</p></div>
       ${w.plan ? desc(w.plan, (x) => x.userId).map((x) => `<div class="card row sp"><div>${memberName(x.userId, x.name)}<p class="mut sm">${h(Mushaf.range(x.pages[0], x.pages[1], st.lang))}</p></div>
@@ -348,9 +427,28 @@ function vCreate() {
   }
   return sub(titles[w.step]) + `<main>${dots}${body}</main>`;
 }
+// «ادعُ أهلك وأصدقاءك» (1.10): the download page with the group code (join request to that group) and the inviter's number.
+const relativesLink = (me) => "https://tsalatnet.github.io/tsalat-media/k/?" + (me.share_code ? "c=" + me.share_code + "&" : "") + "r=" + me.id;
+function qrSvg(text, cell) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: cell, margin: 2, scalable: true }); }
+function inviteCard(me) {
+  const link = relativesLink(me);
+  return `<div class="card hl invite"><b>🤝 ${t().inviteRelatives}</b><div class="row irow">
+      <p class="sm grow">${t().inviteRelativesText(!!me.share_code)}${me.invited ? `<br><b class="invited">${t().invitedCount(me.invited)}</b>` : ""}</p>
+      <div class="qr" data-a="qrBig">${qrSvg(link, 4)}</div></div>
+    <div class="row">${btn(t().shareLink, "inviteShare", "", "grow")}${btn(t().shareQrImage, "inviteImage", "", "outline grow")}</div></div>`;
+}
+// The QR code as a PNG file (canvas), for the share sheet; a browser without file sharing downloads it.
+async function qrPng(text) {
+  const q = qrcode(0, "M"); q.addData(text); q.make();
+  const n = q.getModuleCount(), cell = 16, m = 2 * cell, cv = document.createElement("canvas");
+  cv.width = cv.height = n * cell + 2 * m; const g = cv.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = "#0E3B2E";
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) g.fillRect(m + x * cell, m + y * cell, cell, cell);
+  return new Promise((res) => cv.toBlob((b) => res(new File([b], "khatma-invite.png", { type: "image/png" })), "image/png"));
+}
 function vSettings() {
   const me = st.me;
-  return sub(t().settings) + `<main><div class="card"><small class="mut">${t().myNumber}</small><div class="bigcode">${LTR(me.id)}</div></div>
+  return sub(t().settings) + `<main>${inviteCard(me)}<div class="card"><small class="mut">${t().myNumber}</small><div class="bigcode">${LTR(me.id)}</div></div>
     <h4>${t().language} · ${st.lang === "ar" ? "Langue" : "اللغة"}</h4><div class="row">
       <button class="fchip grow ${st.lang === "ar" ? "on" : ""}" data-a="setLang" data-x="ar">العربية</button><button class="fchip grow ${st.lang === "fr" ? "on" : ""}" data-a="setLang" data-x="fr">Français</button></div>
     <h4>${t().name}</h4><div class="row"><input id="sname" maxlength="40" value="${h(me.name)}">${btn(t().save, "saveName", "", "tonal")}</div>
@@ -380,9 +478,42 @@ function vReader(sc) {
     ${ranged ? "" : `<div class="rbot" id="rbot"><div class="units" id="units"></div><div class="navrow" id="navrow"></div></div>`}
     ${ranged ? `<div class="rbot" id="rbot"><div class="row"><b id="rc"></b><div class="lin grow"><i id="rl"></i></div></div><div id="rbtn"></div></div>` : ""}</div>`;
 }
+// ─── reading log (1.10; phase 1 of the reading-quality design): what the reader measured on a part ───
+// Foreground time per page (a stay without a touch counts 8 min at most), pages shown, foreground spans (a gap
+// over 20 min starts a new one), times hidden, how soon «أتممت» followed the last return. Kept in the store until
+// sent (khatma_read_log) when the page hides, the reader closes, and at «أتممت». Only the part's own reader.
+const RL_CAP = 8 * 60000, RL_GAP = 20 * 60000;
+function readLogOf(key) {
+  let o = {}; try { o = JSON.parse(store.get("rlog_" + key, "{}")) || {}; } catch {}
+  o.pages = o.pages || {}; o.spans = o.spans || []; o.bg_count = o.bg_count || 0;
+  let page = null, segStart = 0, credited = 0, fg = false, lastResume = Date.now(), closed = false;
+  const save = () => { if (!closed) store.set("rlog_" + key, JSON.stringify(o)); };
+  const flush = () => { if (page == null || !fg) return; const total = Math.min(performance.now() - segStart, RL_CAP), add = total - credited;
+    if (add <= 0) return; credited = total; const e = (o.pages[page] = o.pages[page] || { ms: 0, n: 0 }); e.ms += Math.round(add); };
+  const rl = {
+    resume() { if (fg) return; fg = true; const now = Date.now(); lastResume = now; const last = o.spans[o.spans.length - 1];
+      if (last && now - last[1] < RL_GAP) last[1] = now; else o.spans.push([now, now]); while (o.spans.length > 60) o.spans.shift();
+      segStart = performance.now(); credited = 0; },
+    pause(background = true) { if (!fg) return; flush(); fg = false; const last = o.spans[o.spans.length - 1]; if (last) last[1] = Date.now();
+      if (background) o.bg_count++; save(); },
+    enter(p) { if (p === page) return; flush(); page = p; const e = (o.pages[p] = o.pages[p] || { ms: 0, n: 0 }); e.n++; segStart = performance.now(); credited = 0; save(); },
+    touch() { flush(); segStart = performance.now(); credited = 0; },
+    done() { flush(); o.resume_to_done_ms = Date.now() - lastResume; save(); },
+    fgMs() { flush(); return Object.values(o.pages).reduce((a, e) => a + e.ms, 0); },
+    looksShort(pages) { return rl.fgMs() < 40000 * pages || Object.keys(o.pages).length * 2 < pages; },
+    toJson() { flush(); return { source: "web " + VERSION, fg_ms: rl.fgMs(), pages_seen: Object.keys(o.pages).length, sessions: o.spans.length,
+      bg_count: o.bg_count, resume_to_done_ms: o.resume_to_done_ms ?? null, pages: o.pages, spans: o.spans }; },
+    clear() { closed = true; store.set("rlog_" + key, null); },
+  };
+  return rl;
+}
+const sendReadLog = (part, rl) => rl ? rpc("khatma_read_log", auth({ p_khatma: part.khatma_id, p_idx: part.idx, p_log: rl.toJson() })).catch(() => {}) : Promise.resolve();
+
 function setupReader(sc) {
   const box = document.getElementById("pages"), part = sc.part, cu = sc.catchup, ranged = !!(part || cu), pp = sc.personal ? Personal.get() : null;
   const key = part ? part.khatma_id + "#" + part.idx : cu ? "missed#" + cu[0] : pp ? "personal" : "free";
+  const rl = part && part.khatma_status === "active" && part.status !== "done" ? readLogOf(key) : null;
+  sc.rlog = rl; if (rl) rl.resume();
   const els = [...box.children], first = part ? part.from : cu ? cu[0] : pp ? pp.start_page : 1, last = part ? part.to : cu ? cu[1] : 604;
   let start = part ? (+store.get("page_" + key, 0) || part.last_page || first) : cu ? (+store.get("page_" + key, 0) || first) : pp ? Math.min(pp.next, 604) : sc.page;
   if (start < first || start > last) start = first;
@@ -402,6 +533,7 @@ function setupReader(sc) {
     document.getElementById("bb").innerHTML = h(t().pageOfMushaf(pg, Mushaf.hizbAt(pg), Mushaf.juzAt(pg))) + (ranged ? `<b>${h(t().inPortion(pos, tot) + "  ·  " + t().passedLeft(pos - 1, tot - pos + 1))}</b>` : "");
     if (cu) document.getElementById("rs").textContent = n > 604 ? t().khatmDua : t().catchupTitle;
     store.set("page_" + key, pg);
+    if (rl && pg >= first && pg <= last) rl.enter(pg);
     if (part) {
       const total = last - first + 1, read = pg - first + 1, me = (st.me.parts || []).find((p) => p.khatma_id === part.khatma_id && p.idx === part.idx) || part;
       document.getElementById("rc").textContent = LTR(read + "/" + total);
@@ -423,7 +555,7 @@ function setupReader(sc) {
     }
   }
   box.addEventListener("scroll", () => { clearTimeout(update.t); update.t = setTimeout(update, 120); }, { passive: true });
-  box.addEventListener("click", () => chrome(document.getElementById("reader").classList.contains("bare")));
+  box.addEventListener("click", () => { if (rl) rl.touch(); chrome(document.getElementById("reader").classList.contains("bare")); });
   sc.cur = () => cur; sc.last = last;
   // Jump to a page (search, previous / next unit): the pages are laid out right-to-left.
   sc.go = (p) => { const el = els.find((e) => +e.dataset.p === p); if (el) el.scrollIntoView({ inline: "start", block: "nearest" }); setTimeout(update, 150); };
@@ -487,12 +619,13 @@ function render() {
   let v;
   if (isIOS() && !standalone()) v = vInstall();
   else if (sc && sc.s === "psetup") v = vPersonalSetup();
+  else if (sc && sc.s === "pstats") v = vPersonalStats();
   else if (st.phase === "loading") v = vLoading();
   else if (st.phase === "offline") v = vOffline();
   else if (st.phase === "name") v = vName();
   else if (st.phase === "gate") v = vGate();
   else if (!sc) v = vHome();
-  else v = { settings: vSettings, about: vAbout, khatma: () => vKhatmaDetail(sc.id), circle: () => vCircleEdit(sc.id), create: vCreate }[sc.s]();
+  else v = { settings: vSettings, about: vAbout, khatma: () => vKhatmaDetail(sc.id), circle: () => vCircleEdit(sc.id), create: vCreate, cstats: () => vCircleStats(sc.id) }[sc.s]();
   // Keep what the person is typing across re-renders.
   const keep = {}; app.querySelectorAll("input[id],textarea[id]").forEach((i) => (keep[i.id] = i.value));
   app.innerHTML = v + vDialog() + vSheet() + (st.toast ? `<div class="toast">${h(st.toast)}</div>` : "");
@@ -505,7 +638,7 @@ async function share(text) {
   if (navigator.share) { try { await navigator.share({ text }); return; } catch { return; } }
   try { await navigator.clipboard.writeText(text); toast("✓"); } catch {}
 }
-function closeReader() { const sc = topS(); if (sc && sc.lock) sc.lock.release().catch(() => {}); }
+function closeReader() { const sc = topS(); if (sc && sc.lock) sc.lock.release().catch(() => {}); if (sc && sc.rlog) { sc.rlog.pause(false); sendReadLog(sc.part, sc.rlog); } }
 const A = {
   back() { if (topS() && topS().s === "reader" && !st.dialog) closeReader(); back(); },
   start, lang() { A.setLang(st.lang === "ar" ? "fr" : "ar"); },
@@ -525,7 +658,7 @@ const A = {
   closeAdminAsk() { st.dialog = { title: t().closeAdmin, text: t().closeAdminText, okLabel: t().closeAdminOk,
     ok: () => act(async () => { await rpc("khatma_admin_logout", auth()); st.adminTab = false; st.ov = null; st.stack = []; await reload(); }, () => t().adminClosed) }; render(); },
   dclose() { st.dialog = null; st.sheet = null; render(); },
-  dok() { const d = st.dialog, typed = val("acode"), typed2 = val("rname"); st.dialog = null; render(); d.ok(typed, typed2); },   // read the dialog input before it closes
+  dok() { const d = st.dialog, typed = val("acode"), typed2 = val("rname"), paper = document.getElementById("paper")?.checked; st.dialog = null; render(); d.ok(typed, typed2, paper); },   // read the dialog input before it closes
   tab(x) { st.adminTab = x === "1"; st.tab = x; if (st.adminTab) refresh(); render(); window.scrollTo(0, 0); },
   section(x) { st.adminSection = +x; render(); },
   push(x) { push({ s: x }); },
@@ -546,8 +679,14 @@ const A = {
   mushaf() { push({ s: "reader", key: "free", part: null, page: +store.get("page_free", 1) || 1 }); },
   night() { const r = document.getElementById("reader"); const on = !r.classList.contains("night"); r.classList.toggle("night", on); store.set("night", on ? "1" : "0"); },
   doneAsk() { const sc = topS(), p = sc.part, atEnd = sc.cur() >= sc.last;
+    // The measured time looks short for these pages: the reader's word, never a reproach (paper mushaf, by heart).
+    const asked = !!(sc.rlog && sc.rlog.looksShort(p.to - p.from + 1));
     st.dialog = { title: t().confirmTitle, text: atEnd ? t().confirmAtEnd(p.from, p.to) : t().confirmEarly(p.to), okLabel: t().yesFinished,
-      ok: () => act(async () => { const r = await rpc("khatma_part_done", auth({ p_khatma: p.khatma_id, p_idx: p.idx })); sc.finished = true; await reload();
+      body: asked ? `<label class="chk"><input type="checkbox" id="paper"><span>${t().readPaper}</span></label>` : "",
+      ok: (_a, _b, paper) => act(async () => {
+        if (sc.rlog) { sc.rlog.done(); await sendReadLog(p, sc.rlog); }
+        const args = auth({ p_khatma: p.khatma_id, p_idx: p.idx }); if (asked) args.p_paper = !!paper;
+        const r = await rpc("khatma_part_done", args); if (sc.rlog) sc.rlog.clear(); sc.finished = true; await reload();
         st.dialog = { title: r.khatm ? t().khatmTitle : t().acceptedTitle, text: r.khatm ? t().khatmText : t().acceptedText, okLabel: t().alhamdulillah, cancel: false,
           ok: () => { closeReader(); st.stack.pop(); render(); } }; }) }; render(); },
   // admin
@@ -565,15 +704,23 @@ const A = {
   circle(x) { st.circleSel = null; push({ s: "circle", id: x === "" ? null : +x }); },
   csel(x) { const cs = st.circleSel, id = +x, i = cs.sel.indexOf(id); cs.name = val("cname"); if (i >= 0) cs.sel.splice(i, 1); else cs.sel.push(id); render(); },
   circleSave(x) { const cs = st.circleSel, name = val("cname"); if (!name || !cs.sel.length) return;
-    act(async () => { const cid = await rpc("khatma_circle_save", auth({ p_id: x === "" ? null : +x, p_name: name, p_members: cs.sel }));
-      st.ov = await rpc("khatma_admin_overview", auth()); st.stack.pop(); if (x === "") A.create(String(cid)); }, () => t().circleSaved); },
+    const id = x === "" ? null : +x, moved = cs.sel.filter((m) => otherCircle(m, id));
+    const save = () => act(async () => { const cid = await rpc("khatma_circle_save", auth({ p_id: id, p_name: name, p_members: cs.sel }));
+      if (moved.length) await rpc("khatma_circle_move", auth({ p_circle: cid, p_members: moved }));
+      st.ov = await rpc("khatma_admin_overview", auth()); st.stack.pop(); if (x === "") A.create(String(cid)); }, () => t().circleSaved);
+    if (!moved.length) return save();
+    // Members of another circle: the admin confirms the move (each one takes what they read along).
+    cs.name = name;
+    st.dialog = { title: t().transferTitle(moved.length), text: t().transferText(h(name)), okLabel: t().transferOk(moved.length), ok: save,
+      body: `<div class="dscroll">${moved.map((m) => `<div class="mt">${memberName(m, member(m)?.name)}<p class="mut xs">${t().transferFrom(h(otherCircle(m, id).name))}${member(m)?.busy ? t().transferBusy : ""}</p></div>`).join("")}</div>` };
+    render(); },
   circleDelAsk(x) { const c = st.ov.circles.find((q) => q.id === +x); st.dialog = { title: t().deleteCircleTitle(h(c.name)), text: c.active ? t().deleteCircleActiveText(c.active) : t().deleteCircleText, okLabel: t().deleteCircleOk, cancelLabel: t().keep,
     ok: () => act(async () => { await rpc("khatma_circle_cancel", auth({ p_id: +x })); st.ov = await rpc("khatma_admin_overview", auth()); st.me = await rpc("khatma_me", auth()); st.stack.pop(); }, () => t().circleDeleted) }; render(); },
   create(x) { st.wiz = { circle: x ? +x : null, step: x ? 1 : 0, hours: 24, sel: [], input: null, plan: null }; push({ s: "create" }); if (x) loadPlan(); },
   wizCircle(x) { st.wiz.circle = +x; st.wiz.step = 1; render(); loadPlan(); },
-  hours(x) { st.wiz.hours = +x; render(); }, hoursAdd(x) { st.wiz.hours = Math.max(1, Math.min(2160, st.wiz.hours + +x)); render(); },
+  hours(x) { st.wiz.hours = +x; render(); }, hoursAdd(x) { st.wiz.hours = Math.max(1, Math.min(2160, (validHours(st.wiz.hours) ? st.wiz.hours : 24) + +x)); render(); },
   wsel(x) { const w = st.wiz, id = +x, i = w.sel.indexOf(id); if (i >= 0) w.sel.splice(i, 1); else w.sel.push(id); render(); },
-  wizNext() { const w = st.wiz; if (!w.sel.length) return; w.step = 2; w.plan = null; render();
+  wizNext() { const w = st.wiz; if (!w.sel.length || !validHours(w.hours)) return; w.step = 2; w.plan = null; render();
     const rs = w.input.members.filter((m) => w.sel.includes(m.id)).sort((a, b) => a.seat - b.seat);
     w.plan = assignParts(rs, w.input.round); render(); },
   wizCreate() { const w = st.wiz; if (!w.plan) return;
@@ -609,12 +756,50 @@ document.addEventListener("click", (e) => {
   const f = A[el.dataset.a]; if (f) { e.stopPropagation(); f(el.dataset.x ?? ""); }
 });
 document.addEventListener("input", (e) => {
+  if (e.target.id === "hrs" && st.wiz) {      // typed hours: no re-render (the keyboard stays open)
+    const v = e.target.value.trim(), x = /^\d{1,4}$/.test(v) ? +v : NaN; st.wiz.hours = x;
+    document.getElementById("hrsEnd").innerHTML = hoursEnd(x);
+    document.querySelector('[data-a="wizNext"]')?.classList.toggle("off", !(st.wiz.sel.length && validHours(x)));
+    document.querySelectorAll('[data-a="hours"]').forEach((c) => c.classList.toggle("on", +c.dataset.x === x));
+    return;
+  }
   if (e.target.id !== "navq" || !st.dialog) return;
   st.navQ = e.target.value; const pos = e.target.selectionStart; st.dialog.body = navBody(); render();
   const i = document.getElementById("navq"); if (i) { i.focus(); i.setSelectionRange(pos, pos); }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "name") A.setName(); if (e.key === "Enter" && e.target.id === "code") A.join(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden && userId() && st.phase !== "loading") refresh(); });
+A.cstats = (x) => { const id = +x; push({ s: "cstats", id });
+  rpc("khatma_circle_stats", auth({ p_circle: id })).then((d) => { st.cstats = { id, data: d }; render(); }).catch((e) => toast(errorText(e))); };
+// ★ tapped (members list or circle statistics): the detail of the criteria
+A.starsOf = (x) => { const id = +x, m = (st.cstats && st.cstats.data.members.find((q) => q.id === id)) || st.ov.members.find((q) => q.id === id);
+  if (!m || !m.stars) return; st.dialog = { title: memberName(m.id, m.name), body: starsDetail(m.stars), cancelLabel: t().ok }; render(); };
+A.inviteShare = () => share(t().inviteRelativesMessage(relativesLink(st.me)));
+A.inviteImage = async () => {
+  const link = relativesLink(st.me), file = await qrPng(link), text = t().inviteRelativesMessage(link);
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text }); } catch {} return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+};
+A.qrBig = () => { st.dialog = { title: t().inviteRelatives, body: `<div class="qr big">${qrSvg(relativesLink(st.me), 8)}</div><p class="center sm">${t().scanToInstall}</p>`, cancelLabel: t().ok }; render(); };
+document.addEventListener("visibilitychange", () => {
+  const sc = topS(); if (sc && sc.rlog) { if (document.hidden) { sc.rlog.pause(true); sendReadLog(sc.part, sc.rlog); } else sc.rlog.resume(); }
+  if (!document.hidden) checkMinVersion(); if (!document.hidden && userId() && st.phase !== "loading") refresh(); });
+
+// Forced update (1.10): k/version.json's `minWeb` (publish_apk.py --set-min-web). Below it, the app reloads
+// itself: the service worker is network first, so the reload brings the new files. One reload per minimum
+// (remembered for this run), so a stale copy without network never loops.
+const below = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d < 0; } return false; };
+async function checkMinVersion() {
+  try {
+    const r = await fetch("../version.json?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" }); if (!r.ok) return;
+    const v = await r.json();
+    if (!v.minWeb || !below(VERSION, v.minWeb) || checkMinVersion.done === v.minWeb) return;
+    checkMinVersion.done = v.minWeb;
+    const reg = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg) await reg.update().catch(() => {});
+    location.reload();
+  } catch {}
+}
 setInterval(() => { if (!document.hidden && userId() && ["home", "gate"].includes(st.phase)) refresh(); }, 20000);
 
 // An invitation opened in Safari: keep the code for the installed app (it cannot read Safari's storage,
@@ -622,7 +807,10 @@ setInterval(() => { if (!document.hidden && userId() && ["home", "gate"].include
 (function boot() {
   const c = new URLSearchParams(location.search).get("c");
   if (c) store.set("invite", c.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12));
+  const r = (new URLSearchParams(location.search).get("r") || "").replace(/\D/g, "").slice(0, 6);
+  if (r && !store.get("ref")) store.set("ref", r);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  checkMinVersion();
   render();
   if (!(isIOS() && !standalone())) start();
 })();

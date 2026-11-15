@@ -109,9 +109,73 @@ const PP = {
 };
 
 // ─── this phone's storage ───
+// «إحصاءات وردي» (1.10): port of core PersonalStats.kt (same rules; keep in step). Read-only, computed here.
+const PStats = {
+  of(p, today) {
+    const last = Math.max(today, p.start_day), days = []; for (let d = p.start_day; d <= last; d++) days.push(d);
+    let cum = 0; const readBy = {}; days.forEach((d) => { cum += p.log[d] || 0; readBy[d] = cum; });
+    const total = PP.total(p), planDays = Math.max(1, PP.readingDays(p, p.start_day, p.end_day));
+    const planned = (d) => Math.min(total, Math.ceil((total * PP.readingDays(p, p.start_day, d)) / planDays));
+    const series = days.map((d) => ({ day: d, read: readBy[d], planned: planned(d) }));
+    const reading = days.filter((d) => PP.isReadingDay(p, d)), readToday = (p.log[today] || 0) > 0;
+    const counted = reading.filter((d) => d < today || readToday), daysRead = counted.filter((d) => (p.log[d] || 0) > 0).length;
+    const regularity = counted.length ? daysRead / counted.length : 1;
+    const expectedNow = planned(readToday || !PP.isReadingDay(p, today) ? today : today - 1);
+    const onTrack = PP.finished(p) || !expectedNow ? 1 : Math.min(1, PP.read(p) / expectedNow);
+    const score = Math.round((0.6 * regularity + 0.4 * onTrack) * 100);
+    let best = 0, run = 0; reading.forEach((d) => { if ((p.log[d] || 0) > 0) { run++; best = Math.max(best, run); } else if (d < today) run = 0; });
+    let streak = 0; for (const d of [...reading].reverse()) { if ((p.log[d] || 0) > 0) streak++; else if (d < today) break; }
+    const readDays = days.filter((d) => (p.log[d] || 0) > 0);
+    const bestDay = readDays.length ? readDays.reduce((a, d) => ((p.log[d] || 0) > (p.log[a] || 0) ? d : a)) : null;
+    const avg = readDays.length ? readDays.reduce((a, d) => a + (p.log[d] || 0), 0) / readDays.length : 0;
+    let projected = null;
+    if (!PP.finished(p) && avg > 0) { let need = Math.ceil((total - PP.read(p)) / avg), d = today + (readToday ? 1 : 0);
+      while (need > 0) { if (PP.isReadingDay(p, d)) need--; if (need > 0) d++; } projected = d; }
+    const calendar = []; for (let d = p.start_day; d <= Math.max(p.end_day, today); d++) {
+      const n = p.log[d] || 0, td = PP.today(p, d), portion = td.pages ? td.pages[1] - td.pages[0] + 1 : 0;
+      const mark = d > today ? (PP.isReadingDay(p, d) ? "FUTURE" : "REST") : !PP.isReadingDay(p, d) && !n ? "REST" : d === today && !n ? "TODAY"
+        : !n ? "MISSED" : d < today && portion > 0 && n < Math.floor((portion * 3) / 4) ? "PARTIAL" : "DONE";
+      calendar.push({ day: d, mark, pages: n }); }
+    const juzDone = []; for (let j = 1; j <= 30; j++) { const lastPage = j === 30 ? PAGES : JUZ_START[j] - 1; if (lastPage < p.start_page) continue;
+      const need = lastPage - p.start_page + 1, d = days.find((x) => readBy[x] >= need); if (d !== undefined) juzDone.push([j, d]); }
+    return { score, regularity, onTrack, streak, best, bestDay, bestDayPages: bestDay === null ? 0 : p.log[bestDay], avg, daysRead, readingDaysSoFar: counted.length, projected, series, calendar, juzDone };
+  },
+};
+// Anonymous use for the developer (1.10, user decision 15/11/2026): counters here, a daily SUMMARY under a random
+// install id (never the number or the token) to khatma_personal_report. Same keys as the Android PersonalUsage.
+const PUsage = {
+  counters() { try { return JSON.parse(store.get("pu_counters", "{}")) || {}; } catch { return {}; } },
+  count(k) { const c = this.counters(); c[k] = (c[k] || 0) + 1; store.set("pu_counters", JSON.stringify(c)); },
+  tabOpened() { const d = Civil.today(); if (+store.get("pu_tab_day", 0) === d) return; store.set("pu_tab_day", d); this.count("tab_open"); },
+  install() { let id = store.get("pu_install"); if (!id) { const b = new Uint8Array(16); crypto.getRandomValues(b); id = [...b].map((x) => x.toString(16).padStart(2, "0")).join(""); store.set("pu_install", id); } return id; },
+  send() {
+    const today = Civil.today(); if (+store.get("pu_sent_day", 0) === today || !navigator.onLine) return;
+    const p = Personal.get(); let plan = null;
+    if (p) { const ps = PStats.of(p, today), last = Object.keys(p.log).filter((d) => p.log[d] > 0).map(Number).reduce((a, b) => Math.max(a, b), -1), td = PP.today(p, today);
+      const preset = PP.presetOf(p, p.start_day);
+      plan = { days: p.end_day - p.start_day + 1, unit: p.unit, rest: p.rest.length, moments: p.moments.map((m) => m.k), preset: preset ? preset.id : null,
+        from_page1: p.start_page === 1, place: "web", nudge: !!p.nudge, age_days: today - p.start_day, pages_read: PP.read(p), total: PP.total(p),
+        days_read: ps.daysRead, reading_days: ps.readingDaysSoFar, days_since_read: last >= 0 ? today - last : today - p.start_day, score: ps.score,
+        regularity: Math.round(ps.regularity * 100) / 100, on_track: Math.round(ps.onTrack * 100) / 100, streak: ps.streak, best_streak: ps.best,
+        finished: PP.finished(p), behind: !!td.behind, finished_late: p.finished_at ? Civil.of(new Date(p.finished_at)) - p.end_day : null }; }
+    const report = { v: 1, platform: "ios-web", app: "web " + VERSION, lang: st.lang, done: Personal.done(), counters: this.counters(), hours: PHours.get(), plan };
+    rpc("khatma_personal_report", { p_install: this.install(), p_report: report }).then(() => store.set("pu_sent_day", today)).catch(() => {});
+  },
+};
+// Pages per hour of the day, all personal khatmas («the hour you read most»), kept here.
+const PHours = {
+  get() { const a = (store.get("personal_hours", "") || "").split(",").map(Number); return a.length === 24 && a.every((x) => x >= 0) ? a : Array(24).fill(0); },
+  add(n) { if (n <= 0) return; const a = this.get(); a[new Date().getHours()] += n; store.set("personal_hours", a.join(",")); },
+};
 const Personal = {
   get() { try { const p = JSON.parse(store.get("personal", "null")); return p && p.next ? p : null; } catch { return null; } },
   save(p, finishedNow = false) {
+    const before = this.get(); if (p && before && p.created === before.created && p.next > before.next) PHours.add(p.next - before.next);
+    if (p && (!before || p.created !== before.created)) PUsage.count("created");
+    else if (!p && before && !PP.finished(before)) PUsage.count("stopped");
+    else if (p && before && p.next < before.next) PUsage.count("position_set");
+    else if (p && before && p.end_day > before.end_day && JSON.stringify({ ...p, end_day: before.end_day }) === JSON.stringify(before)) PUsage.count("extended");
+    else if (p && before && p.next === before.next && JSON.stringify(p) !== JSON.stringify(before)) PUsage.count("edited");
     store.set("personal", p ? JSON.stringify(p) : null);
     if (finishedNow) store.set("personal_done", this.done() + 1);
   },
@@ -130,6 +194,7 @@ function prefetchPersonal(p) {
 // ─── views ───
 const momentName = (k) => t().moments[k] || k;
 function vPersonalHome() {
+  PUsage.tabOpened();
   return `${st.offline ? `<div class="card warn"><b>📶 ${t().offlineHomeTitle}</b><p class="sm">${t().offlineHomeText}</p></div>` : ""}
     ${vPersonalCard()}${btn(t().browseMushaf, "mushaf", "", "outline wide")}`;
 }
@@ -151,7 +216,9 @@ function vPersonalCard() {
   const late = td.behind ? `<p class="lt sm">${td.overdue ? t().personalOverdue : t().personalBehind(td.perDay)}</p>
     ${btn(t().personalExtend(Civil.text(PP.extendedEnd(p, day))), "pExtend", "", "soft wide")}` : "";
   const label = td.done || td.restDay ? t().personalKeepReading : p.next > (td.pages ? td.pages[0] : p.next) ? t().personalContinue(p.next) : t().personalReadToday;
+  const ps = PStats.of(p, day);
   return `<div class="hcard"><div class="row sp"><b>📖 ${t().personalTitle}</b><button class="ic" data-a="pEdit">⚙️</button></div>
+    <button class="pill" data-a="pStats">${t().constancyShort(ps.score)}${ps.streak > 1 ? " · 🔥 " + LTR(ps.streak) : ""} ›</button>
     <div class="row gap">${ring(read / total, 96, "#D4AF37", `<b>${Math.floor((read / total) * 100)}${t().pct}</b><small>${LTR(read + "/" + total)}</small>`)}
     <div class="grow">${today}</div></div>
     <small class="o8">${t().personalFinishOn(Civil.text(p.end_day), Math.max(0, p.end_day - day))}</small>${late}
@@ -233,7 +300,15 @@ function personalReaderBar(sc, n) {
 
 // ─── actions ───
 Object.assign(A, {
-  pSetup() { st.pdraft = personalDraft(false); push({ s: "psetup" }); },
+  pSetup() { PUsage.count("setup_open"); st.pdraft = personalDraft(false); push({ s: "psetup" }); },
+  pStats() { PUsage.count("stats_open"); push({ s: "pstats" }); },
+  async pShareStats() {
+    PUsage.count("stats_shared");
+    const p = Personal.get(); if (!p) return; const ps = PStats.of(p, Civil.today()), text = t().shareStatsText(ps.score, PP.read(p), PP.total(p));
+    const file = await statsPng(p, ps);
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text }); } catch {} return; }
+    share(text);
+  },
   pEdit() { st.pdraft = personalDraft(true); push({ s: "psetup" }); },
   pNew() { Personal.save(null); A.pSetup(); },
   pPreset(x) { const e = PRESETS.find((q) => q.id === x), day = Civil.today();
@@ -256,7 +331,7 @@ Object.assign(A, {
       Personal.save(PP.setPosition(p, n + 1, Civil.today(), Date.now())); st.stack.pop(); render(); toast(t().saved); } }; render(); },
   pStopAsk() { st.dialog = { title: t().personalStop, text: t().personalStopText, okLabel: t().personalStopOk,
     ok: () => { Personal.save(null); st.stack.pop(); render(); } }; render(); },
-  pRead() { const p = Personal.get(); if (!p) return; push({ s: "reader", key: "personal#" + p.created, personal: true }); },
+  pRead() { const p = Personal.get(); if (!p) return; PUsage.count("reader_open"); push({ s: "reader", key: "personal#" + p.created, personal: true }); },
   pDoneToday() { const p = Personal.get(), day = Civil.today(); if (!p) return; const td = PP.today(p, day); if (!td.pages) return;
     const q = PP.readTo(p, td.pages[1], day, Date.now()); Personal.save(q);
     let nd = day + 1; while (!PP.isReadingDay(q, nd) && nd < day + 8) nd++;
@@ -272,3 +347,53 @@ document.addEventListener("change", (e) => {
   if (e.target.id === "pdate" && st.pdraft) { const d = Civil.fromIso(e.target.value); if (d !== null) { st.pdraft.end = d; render(); } }
   if (e.target.id === "pstart" && st.pdraft) { st.pdraft.startPage = e.target.value; render(); }
 });
+
+// ─── «إحصاءات وردي» page (1.10) ───
+const MARK_COLOR = { DONE: "#2E9E6B", PARTIAL: "#E8C26A", MISSED: "#F2B8B0", REST: "#D9DEDB", TODAY: "#F3E6B8", FUTURE: "rgba(128,128,128,.1)" };
+function vPersonalStats() {
+  const p = Personal.get(); if (!p) return sub(t().personalStatsTitle);
+  const today = Civil.today(), ps = PStats.of(p, today), total = PP.total(p), hours = PHours.get();
+  const W = 320, H = 160, span = Math.max(1, ps.calendar.length - 1), X = (i) => (W * i) / span, Y = (v) => H - (H * v) / total;
+  const chart = `<svg viewBox="0 0 ${W} ${H}" class="chart" dir="ltr">${[1, 2, 3].map((g) => `<line x1="0" x2="${W}" y1="${(H * g) / 4}" y2="${(H * g) / 4}" class="grid"/>`).join("")}
+    <line x1="0" y1="${H}" x2="${X(span)}" y2="0" class="typ" stroke-dasharray="8 6"/><path d="M0,${H}${ps.series.map((q, i) => ` L${X(i).toFixed(1)},${Y(q.read).toFixed(1)}`).join("")}" class="run"/></svg>`;
+  const proj = PP.finished(p) ? t().projFinished : ps.projected === null ? t().projNone
+    : ps.projected <= p.end_day ? t().projOnTime(Civil.text(ps.projected)) : t().projLate(Civil.text(ps.projected), ps.projected - p.end_day);
+  const cal = ps.calendar.map((c) => `<span class="cday" style="background:${MARK_COLOR[c.mark]};color:${c.mark === "DONE" ? "#fff" : "#333"}">${LTR(new Date(c.day * 86400000).getUTCDate())}</span>`).join("");
+  const legend = [["DONE", t().markRead], ["PARTIAL", t().markPartial], ["MISSED", t().markMissed], ["REST", t().markRest]]
+    .map(([m, l]) => `<span class="xs"><span class="dot" style="background:${MARK_COLOR[m]}"></span> ${l}</span>`).join(" &nbsp; ");
+  const peak = Math.max(...hours) > 0 ? hours.indexOf(Math.max(...hours)) : null;
+  const juz = Array.from({ length: 30 }, (_, i) => { const ok = ps.juzDone.some(([j]) => j === i + 1);
+    return `<span class="cjuz" style="background:${ok ? "var(--gold)" : "rgba(128,128,128,.15)"};color:${ok ? "#2a2200" : "#888"}">${LTR(i + 1)}</span>`; }).join("");
+  return sub(t().personalStatsTitle) + `<main>
+    <div class="card hl2"><div class="row gap">${ring(ps.score / 100, 96, "#D4AF37", `<b>${LTR(ps.score)}</b>`)}<div class="grow"><b>${t().constancyTitle}</b>
+      <p class="sm">${t().constancyLine(ps.daysRead, ps.readingDaysSoFar, Math.round(ps.onTrack * 100))}</p>${ps.streak ? `<p class="b gold-t">${t().streakLine(ps.streak)}</p>` : ""}</div></div>
+      <p class="xs mut">${t().constancyHow}</p></div>
+    <div class="card"><b>${t().curveTitle}</b><p class="mut xs">${t().pagesOf(PP.read(p), total)}</p>${chart}
+      <p class="xs"><span class="dot" style="background:var(--gold)"></span> ${t().legendRead} &nbsp; <span class="dot" style="background:var(--muted)"></span> ${t().legendPlan}</p><p class="b sm">${proj}</p></div>
+    <div class="card"><b>${t().calendarTitle}</b><div class="cal">${cal}</div><p>${legend}</p></div>
+    <div class="card"><b>${t().recordsTitle}</b><p class="sm">${t().recordStreak(ps.best)}</p>
+      ${ps.bestDay !== null ? `<p class="sm">${t().recordDay(ps.bestDayPages, Civil.text(ps.bestDay))}</p>` : ""}${ps.avg > 0 ? `<p class="sm">${t().recordAvg(ps.avg)}</p>` : ""}
+      ${peak !== null ? `<p class="sm">${t().recordHour(peak)}</p>` : ""}${Personal.done() ? `<p class="b gold-t">${t().personalDoneCount(Personal.done())}</p>` : ""}
+      ${ps.juzDone.length ? `<p class="b">${t().juzTitle(ps.juzDone.length)}</p><div class="cal">${juz}</div>` : ""}</div>
+    ${btn(t().shareStats, "pShareStats", "", "gold wide")}<p class="mut xs">${t().statsPrivate}</p></main>`;
+}
+// A 1080×1350 image of the figures, for the share sheet (null when the canvas cannot be read).
+async function statsPng(p, ps) {
+  try {
+    const cv = document.createElement("canvas"); cv.width = 1080; cv.height = 1350; const g = cv.getContext("2d");
+    g.fillStyle = "#0E5C46"; g.fillRect(0, 0, 1080, 1350); g.fillStyle = "#FFFCF5"; g.beginPath(); g.roundRect(60, 60, 960, 1230, 48); g.fill();
+    g.textAlign = "center"; g.direction = st.lang === "ar" ? "rtl" : "ltr";
+    const tx = (s, size, y, col, bold) => { g.font = `${bold ? "700 " : ""}${size}px Amiri, serif`; g.fillStyle = col; g.fillText(s.replace(/[\u2066-\u2069]/g, ""), 540, y); };
+    tx(t().appName, 60, 170, "#0E5C46", true); tx(t().personalStatsTitle, 42, 240, "#5B645F");
+    g.lineWidth = 34; g.lineCap = "round"; g.strokeStyle = "#E3DCCB"; g.beginPath(); g.arc(540, 470, 170, 0, 2 * Math.PI); g.stroke();
+    g.strokeStyle = "#D4AF37"; g.beginPath(); g.arc(540, 470, 170, -Math.PI / 2, -Math.PI / 2 + (2 * Math.PI * ps.score) / 100); g.stroke();
+    tx(String(ps.score), 120, 510, "#1C2420", true); tx(t().constancyTitle, 46, 730, "#1C2420", true);
+    tx(t().pagesOf(PP.read(p), PP.total(p)), 40, 800, "#5B645F");
+    if (ps.streak) tx(t().streakLine(ps.streak), 42, 880, "#9A7B12", true);
+    tx(t().recordStreak(ps.best), 38, 950, "#5B645F"); if (ps.juzDone.length) tx(t().juzTitle(ps.juzDone.length), 38, 1020, "#5B645F");
+    if (Personal.done()) tx(t().personalDoneCount(Personal.done()), 38, 1090, "#9A7B12", true);
+    tx("tsalatnet.github.io/tsalat-media/k", 32, 1220, "#0E5C46");
+    const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
+    return blob ? new File([blob], "khatma-stats.png", { type: "image/png" }) : null;
+  } catch { return null; }
+}
