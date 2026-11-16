@@ -1,10 +1,10 @@
 {
  "versionName": "1.20",
- "versionCode": 21,
+ "versionCode": 22,
  "date": "2026-11-16",
  "url": "https://github.com/tsalatnet/tsalat-media/releases/download/khatma-beta/khatma-beta.apk",
- "sha256": "d6a19884beb56589de71ce0e506447acaeeb5f81f6864d6e7c9227106f91f6e2",
- "size": 4404044,
+ "sha256": "c42038aa75019cabe3028f9c3eefbfb764f454c998b7ee0e6d84bd62cc3ac1a4",
+ "size": 4404056,
  "notes": [],
  "minCode": 17,
  "minWeb": ""
