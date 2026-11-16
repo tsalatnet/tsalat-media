@@ -1,14 +1,11 @@
 {
- "versionName": "1.18",
- "versionCode": 19,
- "date": "2026-11-15",
+ "versionName": "1.19",
+ "versionCode": 20,
+ "date": "2026-11-16",
  "url": "https://github.com/tsalatnet/tsalat-media/releases/download/khatma-beta/khatma-beta.apk",
- "sha256": "ab3a9918b3d3988f49ee7aacb19d1bc5195bb3fc3324bed282de887ba8f9a0eb",
- "size": 4387682,
- "notes": [
-  "توزيع الأوراد: لا يُعطى أحدٌ صفحاتٍ قرأها من قبل، ويبدأ كلٌّ من حيث توقّف قدر الإمكان.",
-  "Répartition des أوراد : plus aucune page déjà lue, chacun reprend où il s'est arrêté autant que possible."
- ],
+ "sha256": "b8f3293367cdf80f2eda56bd5d209e2b47ffbae28c3c363eedc67f8cb250ddf7",
+ "size": 4387671,
+ "notes": [],
  "minCode": 17,
  "minWeb": ""
 }
