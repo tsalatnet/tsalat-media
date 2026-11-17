@@ -2,6 +2,28 @@
 "use strict";
 const PAGES = 604;
 
+// Tunisian mobile number (1.19 / web 1.11): same rules as core Phone.kt and the server's khatma_phone_norm.
+// {ok: "98451273"} or {bad: "empty" | "length" | "prefix" | "arbitrary"}.
+function phoneCheck(raw) {
+  let d = "";
+  for (const c of String(raw || "")) {
+    const k = c.charCodeAt(0);
+    if ((c >= "0" && c <= "9") || c === "+") d += c;
+    else if (k >= 0x660 && k <= 0x669) d += String(k - 0x660);
+    else if (k >= 0x6f0 && k <= 0x6f9) d += String(k - 0x6f0);
+    else if (!" .-()/\u00a0".includes(c)) d += "?";
+  }
+  if (!d) return { bad: "empty" };
+  if (d.startsWith("+216")) d = d.slice(4); else if (d.startsWith("00216")) d = d.slice(5); else if (d.startsWith("216") && d.length === 11) d = d.slice(3);
+  if (!/^[0-9]{8}$/.test(d)) return { bad: "length" };
+  if (!"2459".includes(d[0])) return { bad: "prefix" };
+  const t = d.slice(2);
+  const arbitrary = /^(.)\1{5}$/.test(t) || "01234567890123".includes(t) || "98765432109876".includes(t) ||
+    d === d.slice(0, 2).repeat(4) || d === d.slice(0, 4).repeat(2) || new Set(d).size < 3;
+  return arbitrary ? { bad: "arbitrary" } : { ok: d };
+}
+const phonePretty = (d) => (d && d.length === 8 ? `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` : d || "");
+
 // First page of each surah (Madina pages, measured on the Tunisian mushaf images).
 const SURAH_START = [1, 2, 50, 77, 106, 128, 151, 177, 187, 208, 221, 235, 249, 255, 262, 267, 282, 293, 305, 312,
   322, 332, 342, 350, 359, 367, 377, 385, 396, 404, 411, 415, 418, 428, 434, 440, 446, 453, 458, 467,
@@ -101,21 +123,50 @@ function maxAssignment(w) {
   const res = new Array(n); for (let j = 1; j <= n; j++) res[p[j] - 1] = j - 1; return res;
 }
 
-// readers in seat order [{id, name, coverage, last_to}], round = the circle's khatma counter (core Rotation.assign):
-// 1. as many readers as possible progress (a part holding unread pages of theirs); 2. as many as possible read on
-// (the part right after their last page, else the one holding it, else one touching their read pages); 3. fewest parts left
-// first; 4. the most unread pages; 5. the plain rotation (part (i + round) mod n). Same units as the Kotlin.
+// core Parts.around: n parts covering 1..604 in order, cut as often as possible at one of the starts (pages where a
+// reader goes on), each within ±tolerance of the equal share, then the sizes as even as possible; a cut always at page 1.
+function partsAround(starts, n, tolerance) {
+  if (n === 1 || starts.size === 0) return splitParts(n);
+  const share = PAGES / n, lo = Math.max(1, Math.floor(share * (1 - tolerance))), hi = Math.max(lo, Math.ceil(share * (1 + tolerance)));
+  const BIG = 2 ** 40, NONE = -Infinity;
+  const best = Array.from({ length: n + 1 }, () => new Array(PAGES + 1).fill(NONE));
+  const from = Array.from({ length: n + 1 }, () => new Int16Array(PAGES + 1));
+  best[0][0] = 0;
+  for (let k = 0; k < n; k++) for (let x = 0; x <= PAGES; x++) {
+    const b = best[k][x]; if (b === NONE) continue;
+    const bonus = starts.has(x + 1) ? BIG : 0, left = n - k - 1;
+    for (let len = lo; len <= hi; len++) {
+      const y = x + len; if (y > PAGES) break;
+      if (PAGES - y < left * lo || PAGES - y > left * hi) continue;
+      const d = len * n - PAGES, v = b + bonus - d * d;
+      if (v > best[k + 1][y]) { best[k + 1][y] = v; from[k + 1][y] = x; }
+    }
+  }
+  if (best[n][PAGES] === NONE) return splitParts(n);
+  const cuts = new Array(n + 1); cuts[n] = PAGES;
+  for (let k = n; k >= 1; k--) cuts[k - 1] = from[k][cuts[k]];
+  return Array.from({ length: n }, (_, i) => [cuts[i] + 1, cuts[i + 1]]);
+}
+
+// readers in seat order [{id, name, coverage, last_to}], round = the circle's khatma counter (core Rotation.assign, 1.18):
+// parts cut where readers stopped (partsAround, ±15 %), then 1. as many readers as possible progress (a part holding
+// unread pages of theirs); 2. the fewest pages read twice (none whenever possible); 3. as many as possible read on (the
+// part right after their last page, else the one holding it, else one touching their read pages); 4. fewest parts left
+// first; 5. the plain rotation (part (i + round) mod n). Same units as the Kotlin.
+const TOLERANCE = 0.15;
 function assignParts(readers, round) {
-  const n = readers.length, parts = splitParts(n);
-  const uPages = n * n + 1, uUrgency = uPages * (PAGES + 1), uContinuity = uUrgency * (2 * n + 1), uProgress = uContinuity * (3 * n + 1);
+  const n = readers.length;
+  const parts = partsAround(new Set(readers.filter((r) => r.last_to != null).map((r) => (r.last_to % PAGES) + 1)), n, TOLERANCE);
+  const uUrgency = n * n + 1, uContinuity = uUrgency * (2 * n + 1), uTwice = uContinuity * (3 * n + 1), uProgress = uTwice * (PAGES + 1);
   const gain = readers.map((r) => parts.map((pt) => unread(r.coverage, pt)));
   const remaining = gain.map((row) => row.filter((g) => g > 0).length);
   const has = (c, p) => c[(((p - 1) % PAGES) + PAGES) % PAGES] === "1";   // the Quran as a ring
   const w = gain.map((row, i) => { const r = readers[i], next = r.last_to == null ? null : (r.last_to % PAGES) + 1;
+    const home = next == null ? -1 : parts.findIndex(([f, t]) => f <= next && next <= t);   // the part holding their next page
     return row.map((g, j) => { const [f, t] = parts[j];
       const cont = next != null && f === next ? 3 : next != null && f < next && next <= t ? 2 : g < t - f + 1 || has(r.coverage, f - 1) || has(r.coverage, t + 1) ? 1 : 0;
       const urg = g === 0 ? 0 : remaining[i] <= 1 ? 2 : remaining[i] <= 3 ? 1 : 0;
-      return (g > 0 ? uProgress : 0) + cont * uContinuity + urg * uUrgency + g * uPages - (((j - (i + round)) % n) + n) % n; }); });
+      return (g > 0 ? uProgress : 0) - (t - f + 1 - g) * uTwice + cont * uContinuity + urg * uUrgency - (((j - (home >= 0 ? home : i + round)) % n) + n) % n; }); });
   const partOf = maxAssignment(w);
   return readers.map((r, i) => ({ userId: r.id, name: r.name, pages: parts[partOf[i]], unread: gain[i][partOf[i]] }));
 }

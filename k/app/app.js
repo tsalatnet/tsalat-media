@@ -5,7 +5,7 @@ const API = "https://xecnhwgdymydmbhwzhaj.supabase.co/rest/v1/rpc/";
 const KEY = "sb_publishable_p7NtGN0uUUkRMRGcqu1Rxg_DQBCRUxV";
 const INVITE_URL = "https://tsalatnet.github.io/tsalat-media/k/?c=";
 const MUSHAF = "../mushaf/";   // 001.jpg … 604.jpg, dua1.jpg, dua2.jpg
-const VERSION = "1.10";
+const VERSION = "1.11";
 
 // ─── storage (localStorage can throw in private mode: the app then works for this visit only) ───
 const store = {
@@ -178,8 +178,25 @@ function vName() {
   return `${hero(t().welcome, t().tagline, badge(userId(), t().yourNumber))}<main>
     <p class="mut">${t().numberExplained}</p><h2>${t().whatName}</h2><p class="mut">${t().nameShown}</p>
     <input id="name" maxlength="40" placeholder="${t().nameField}" autocomplete="name">
+    <h2>${t().phoneTitle}</h2><p class="mut">${t().phoneWhy}</p>${phoneInput("phone")}
     ${btn(t().continueBtn, "setName", "", "wide")}
     <div class="center">${btn(t().recoverAsk, "recoverDialog", "", "text")}</div></main>`;
+}
+// Mobile number field (1.19): the precise problem under it, updated while typing (input listener below).
+const phoneInput = (id, value = "") => `<div class="grow"><input id="${id}" class="phone" dir="ltr" inputmode="tel" autocomplete="tel" maxlength="17" placeholder="98 451 273" value="${h(value)}">
+  <p class="xs perr" id="${id}-err"></p></div>`;
+function phoneHint(id, tried) {
+  const i = document.getElementById(id), e = document.getElementById(id + "-err"); if (!i || !e) return null;
+  const r = phoneCheck(i.value), digits = (i.value.match(/[0-9\u0660-\u0669\u06f0-\u06f9]/g) || []).length;
+  if (r.bad && (tried || digits >= 8)) { e.textContent = t().phoneProblem[r.bad]; e.className = "xs perr red"; }
+  else if (r.ok) { e.textContent = "✓ " + LTR(phonePretty(r.ok)); e.className = "xs perr ok"; }
+  else { e.textContent = ""; e.className = "xs perr"; }
+  return r.ok || null;
+}
+// An older member without a mobile number taps a portion: the number first, then that portion opens.
+function vPhone(sc) {
+  return sub(t().phoneNeededTitle) + `<main><div class="center"><div class="big">📱</div></div><h3>${t().phoneNeededText}</h3><p class="mut">${t().phoneWhy}</p>
+    ${phoneInput("pphone")}${btn(t().phoneSaveAndRead, "savePhoneOpen", sc.key, "wide")}</main>`;
 }
 function vGate() {
   const me = st.me, pending = me.links.find((l) => l.status === "pending");
@@ -452,6 +469,7 @@ function vSettings() {
     <h4>${t().language} · ${st.lang === "ar" ? "Langue" : "اللغة"}</h4><div class="row">
       <button class="fchip grow ${st.lang === "ar" ? "on" : ""}" data-a="setLang" data-x="ar">العربية</button><button class="fchip grow ${st.lang === "fr" ? "on" : ""}" data-a="setLang" data-x="fr">Français</button></div>
     <h4>${t().name}</h4><div class="row"><input id="sname" maxlength="40" value="${h(me.name)}">${btn(t().save, "saveName", "", "tonal")}</div>
+    <h4>${t().phone}</h4><div class="row">${phoneInput("sphone", phonePretty(me.phone))}${btn(t().save, "savePhone", "", "tonal")}</div>
     <h4>${t().myGroups}</h4>${me.links.map((l) => `<p>${l.status === "pending" ? t().groupPending(h(l.admin)) : t().groupMember(h(l.admin))}</p>`).join("")}
     <div class="row"><input id="code" class="code" maxlength="6" placeholder="${t().otherInvite}">${btn(t().join, "join", "", "tonal")}</div>
     <h4>${t().adminSection}</h4>${me.assists ? `<p><b>${t().youAssist(h(me.assists.name), me.invite_code || "")}</b></p>` : me.is_admin ? `<p><b>${t().youAreAdmin(me.invite_code || "")}</b></p>` : ""}
@@ -625,7 +643,7 @@ function render() {
   else if (st.phase === "name") v = vName();
   else if (st.phase === "gate") v = vGate();
   else if (!sc) v = vHome();
-  else v = { settings: vSettings, about: vAbout, khatma: () => vKhatmaDetail(sc.id), circle: () => vCircleEdit(sc.id), create: vCreate, cstats: () => vCircleStats(sc.id) }[sc.s]();
+  else v = { phone: () => vPhone(sc), settings: vSettings, about: vAbout, khatma: () => vKhatmaDetail(sc.id), circle: () => vCircleEdit(sc.id), create: vCreate, cstats: () => vCircleStats(sc.id) }[sc.s]();
   // Keep what the person is typing across re-renders.
   const keep = {}; app.querySelectorAll("input[id],textarea[id]").forEach((i) => (keep[i.id] = i.value));
   app.innerHTML = v + vDialog() + vSheet() + (st.toast ? `<div class="toast">${h(st.toast)}</div>` : "");
@@ -643,7 +661,11 @@ const A = {
   back() { if (topS() && topS().s === "reader" && !st.dialog) closeReader(); back(); },
   start, lang() { A.setLang(st.lang === "ar" ? "fr" : "ar"); },
   setLang(l) { st.lang = l; store.set("lang", l); if (userId()) rpc("khatma_set_lang", auth({ p_lang: l })).catch(() => {}); render(); },
-  setName() { const n = val("name"); if (n.length < 2) return; act(async () => { await rpc("khatma_set_name", auth({ p_name: n })); await reload(); }); },
+  setName() { const n = val("name"), ph = phoneHint("phone", true); if (n.length < 2 || !ph) return;
+    act(async () => { await rpc("khatma_set_phone", auth({ p_phone: ph })); await rpc("khatma_set_name", auth({ p_name: n })); await reload(); }); },
+  savePhone() { const ph = phoneHint("sphone", true); if (!ph) return; act(async () => { await rpc("khatma_set_phone", auth({ p_phone: ph })); await reload(); }, () => t().phoneSaved); },
+  savePhoneOpen(x) { const ph = phoneHint("pphone", true); if (!ph) return;
+    act(async () => { await rpc("khatma_set_phone", auth({ p_phone: ph })); await reload(); if (topS() && topS().s === "phone") st.stack.pop(); A.open(x); }); },
   saveName() { const n = val("sname"); act(async () => { await rpc("khatma_set_name", auth({ p_name: n })); await reload(); }, () => t().nameSaved); },
   requestJoin() { act(async () => { const r = await rpc("khatma_request_join", auth()); await reload(); joinSent(r.admin); }); },
   join() { const c = val("code").toUpperCase(); if (c.length !== 6) return;
@@ -663,6 +685,8 @@ const A = {
   section(x) { st.adminSection = +x; render(); },
   push(x) { push({ s: x }); },
   open(x) { const [k, i] = x.split("#"); const p = st.me.parts.find((q) => q.khatma_id === k && q.idx === +i); if (!p) return;
+    // 1.19: no portion of an active khatma before the mobile number is given (asked once).
+    if (p.khatma_status === "active" && !st.me.phone) { push({ s: "phone", key: x }); return; }
     if (p.status === "assigned") rpc("khatma_part_start", auth({ p_khatma: k, p_idx: p.idx })).catch(() => {});
     push({ s: "reader", key: x, part: p }); },
   navOpen() { st.navTab = st.navTab || "surah"; st.navQ = ""; st.dialog = { title: t().navTitle, body: navBody(), cancelLabel: t().cancel }; render(); },
@@ -767,7 +791,9 @@ document.addEventListener("input", (e) => {
   st.navQ = e.target.value; const pos = e.target.selectionStart; st.dialog.body = navBody(); render();
   const i = document.getElementById("navq"); if (i) { i.focus(); i.setSelectionRange(pos, pos); }
 });
-document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "name") A.setName(); if (e.key === "Enter" && e.target.id === "code") A.join(); });
+document.addEventListener("input", (e) => { if (e.target.classList && e.target.classList.contains("phone")) phoneHint(e.target.id, false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "phone") A.setName(); if (e.key === "Enter" && e.target.id === "pphone") A.savePhoneOpen(topS().key);
+  if (e.key === "Enter" && e.target.id === "name") document.getElementById("phone")?.focus(); if (e.key === "Enter" && e.target.id === "code") A.join(); });
 A.cstats = (x) => { const id = +x; push({ s: "cstats", id });
   rpc("khatma_circle_stats", auth({ p_circle: id })).then((d) => { st.cstats = { id, data: d }; render(); }).catch((e) => toast(errorText(e))); };
 // ★ tapped (members list or circle statistics): the detail of the criteria
