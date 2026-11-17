@@ -1,13 +1,13 @@
 {
- "versionName": "1.17",
- "versionCode": 18,
- "date": "2026-11-15",
+ "versionName": "1.20",
+ "versionCode": 22,
+ "date": "2026-11-17",
  "url": "https://github.com/tsalatnet/tsalat-media/releases/download/khatma/khatma.apk",
- "sha256": "d73b202f1aa30403c9cb7e104cdc44cb3ff84145e78b9e3d4b44213d978878b5",
- "size": 4387670,
+ "sha256": "c42038aa75019cabe3028f9c3eefbfb764f454c998b7ee0e6d84bd62cc3ac1a4",
+ "size": 4404056,
  "notes": [
-  "ادعُ أهلك، إحصاءات وردي، نجوم المتابعة وإحصاءات الحلقة"
+  "رقم الهاتف الجوّال مطلوب · توزيع الأوراد دون إعادة صفحات مقروءة"
  ],
- "minCode": 18,
+ "minCode": 22,
  "minWeb": "1.10"
 }
