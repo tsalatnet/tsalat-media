@@ -1,12 +1,12 @@
 {
- "versionName": "1.21",
- "versionCode": 23,
- "date": "2026-11-17",
+ "versionName": "1.22",
+ "versionCode": 24,
+ "date": "2026-11-18",
  "url": "https://github.com/tsalatnet/tsalat-media/releases/download/khatma-beta/khatma-beta.apk",
- "sha256": "a4f43b57a3978e8a9083bb91f9b06779b0e35a25667cb2e0fb239db49b9b36e3",
- "size": 4208439,
+ "sha256": "4f1ef43298d688c50f88bce03d0d1186321bb739fb256de451b052b6d4ae4ad5",
+ "size": 4208441,
  "notes": [
-  "إشعارات: إعادة تسجيل الهاتف لدى خدمة الإشعارات (OneSignal 5.10)"
+  "عوالم مستقلّة لكل مشرف · المطوّر يختار المجموعة"
  ],
  "minCode": 17,
  "minWeb": ""
