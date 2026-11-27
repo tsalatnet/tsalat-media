@@ -1,7 +1,7 @@
 // TSALAT web app — offline: the app shell is kept (network first, cache when offline). The times
 // themselves are kept by core.js (localStorage), the Supabase calls are never cached here.
-const SHELL = "tsalat-w-1";
-const FILES = ["./", "index.html", "styles.css?v=1", "core.js?v=1", "app.js?v=1", "qrcode.js?v=1", "cities.json", "icon-192.png", "icon-180.png"];
+const SHELL = "tsalat-w-2";
+const FILES = ["./", "index.html", "styles.css?v=1", "core.js?v=1", "app.js?v=2", "qrcode.js?v=1", "cities.json", "icon-192.png", "icon-180.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("tsalat-w-") && k !== SHELL).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

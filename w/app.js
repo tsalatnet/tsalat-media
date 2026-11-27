@@ -28,14 +28,20 @@
       <input class="search" id="q" type="search" placeholder="اسم المسجد أو المدينة · Mosquée ou ville" autocomplete="off">
       <div class="hits" id="hits"><div class="spinner"></div></div>`;
     let list = [];
-    try { list = await TS.directory(); } catch (e) { document.getElementById("hits").innerHTML = `<p class="msg">لا اتصال بالإنترنت · Pas de connexion</p>`; return; }
+    try { list = await TS.directory(); await Promise.all(list.slice(0, 1).map(m => TS.cityAr(m.code))); } catch (e) { document.getElementById("hits").innerHTML = `<p class="msg">لا اتصال بالإنترنت · Pas de connexion</p>`; return; }
     const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ًͯ-ْ]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه");
     const q = document.getElementById("q");
+    // The Latin city / code name the TIMES TABLE's town, shared by nearby towns (Khniss uses Ksibet el Mediouni's):
+    // only searched and shown when it is the mosque's own town (same rule as MosqueEntry.searchFields in the app).
+    const tableAr = {};
+    for (const m of list) if (!(m.code in tableAr)) tableAr[m.code] = await TS.cityAr(m.code);
+    const inTable = (m) => !m.cityAr || m.cityAr === tableAr[m.code];
+    const slug = (m) => m.id.split(".").slice(2).join(" ").replace(/-/g, " ");
     const show = () => {
       const words = norm(q.value).split(/\s+/).filter(Boolean);
-      const hits = words.length ? list.filter(m => { const h = norm(m.name + " " + m.city + " " + m.cityAr + " " + m.id); return words.every(w => h.includes(w)); }).slice(0, 40) : [];
+      const hits = words.length ? list.filter(m => { const h = norm([m.name, m.cityAr, slug(m), inTable(m) ? m.city + " " + m.code : ""].join(" ")); return words.every(w => h.includes(w)); }).slice(0, 40) : [];
       document.getElementById("hits").innerHTML = !words.length ? `<p class="msg">${ltr(list.length)} مسجدًا · mosquées</p>`
-        : hits.length ? hits.map(m => `<a class="hit" href="?id=${encodeURIComponent(m.id)}">${esc(m.name)}<small>${esc(m.cityAr || m.city)} · ${esc(m.city)}</small></a>`).join("")
+        : hits.length ? hits.map(m => `<a class="hit" href="?id=${encodeURIComponent(m.id)}">${esc(m.name)}<small>${esc(m.cityAr || m.city)}${inTable(m) && m.cityAr && m.city ? ` · <span class="fr">${esc(m.city)}</span>` : ""}</small></a>`).join("")
         : `<p class="msg">لا نتيجة · Aucun résultat</p>`;
     };
     q.addEventListener("input", show); show(); q.focus();
