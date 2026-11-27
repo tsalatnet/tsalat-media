@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>توقيت الصّلاة · TSALAT</title>
+<meta name="description" content="تطبيق مواقيت الصلاة لمسجدنا · L'application des horaires de prière de notre mosquée">
+<meta name="theme-color" content="#2c0c38">
+<link rel="icon" href="../w/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../w/styles.css?v=1">
+<style>
+  .welcome { color: var(--ivory); font-size: 1.15rem; margin-top: 4px; }
+  .strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 16px 0 6px; }
+  .strip div { background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 14px; padding: 6px 2px; text-align: center; }
+  .strip b { display: block; color: var(--gold2); font-size: 1rem; font-weight: 400; }
+  .strip span { font-family: var(--fr); font-weight: 600; font-size: 1.05rem; color: #fff; }
+  .strip .on { background: rgba(226,191,116,.25); border-color: var(--gold); }
+  .android { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: rgba(61,220,132,.15);
+    color: #8ff0b8; border: 1px solid rgba(61,220,132,.4); font-size: .95rem; }
+  .cta { margin: 18px 0 8px; }
+  .cta .btn { font-size: 1.45rem; padding: 16px; box-shadow: 0 10px 30px rgba(226,191,116,.25); }
+  .cta .btn .fr { display: block; font-size: .95rem; font-weight: 600; }
+  .ver { text-align: center; color: var(--dim); font-size: .85rem; margin-top: 6px; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 6px 0 0; }
+  .steps li { counter-increment: s; position: relative; padding: 6px 44px 6px 0; }
+  .steps li::before { content: counter(s); position: absolute; right: 0; top: 6px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--gold); color: #2a0f2e; font-family: var(--fr); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .steps .fr { display: block; font-size: .85rem; color: var(--dim); }
+  .feat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+  .feat div { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 12px; text-align: center; }
+  .feat i { font-style: normal; font-size: 1.7rem; display: block; }
+  .feat b { display: block; color: var(--ivory); font-size: 1.1rem; font-weight: 400; }
+  .feat .fr { font-size: .8rem; color: var(--dim); }
+  .ok { display: none; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(61,220,132,.12); border: 1px solid rgba(61,220,132,.35); color: #c9f5dc; font-size: 1rem; }
+  .ok.show { display: block; }
+</style>
+</head>
+<body>
+<main id="app"><div class="spinner"></div></main>
+<script src="../w/qrcode.js?v=1"></script>
+<script src="../w/core.js?v=1"></script>
+<script>
+"use strict";
+(async () => {
+  const $app = document.getElementById("app");
+  const { esc, ltr, hm } = TS;
+  const id = TS.validId(new URLSearchParams(location.search).get("id"));
+  // An iPhone cannot install the Android app: straight to the web app of the same mosque.
+  if (TS.isIOS()) { location.replace("../w/" + (id ? "?id=" + encodeURIComponent(id) : "")); return; }
+  if (!id) { location.replace("../"); return; }
+
+  let M = null;
+  try { M = await TS.load(id); } catch (e) { /* the page still offers the app */ }
+  const c = M ? M.cfg : { id, name: "", cityAr: "", city: "", image: "" };
+  if (c.name) document.title = c.name + " · توقيت الصّلاة";
+
+  let apk = "https://github.com/tsalatnet/tsalat-media/releases/download/app/tsalat.apk", ver = "";
+  try { const v = await fetch("../app/version.json", { cache: "no-store" }).then(r => r.json()); if (v.url) apk = v.url; ver = v.versionName; } catch (e) {}
+
+  // Today's azans (the five prayers), the next one highlighted.
+  let strip = "";
+  if (M) {
+    const now = new Date(), list = (M.dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate())) || []).filter(p => p.key !== "shrouq");
+    const next = list.find(p => p.azan > now);
+    strip = `<div class="strip">${list.map(p => `<div class="${p === next ? "on" : ""}"><b>${p.ar}</b><span>${hm(p.azan)}</span></div>`).join("")}</div>`;
+  }
+  const back = location.href.split("#")[0];
+  const intentUrl = `intent://mosque/${encodeURIComponent(id)}#Intent;scheme=tsalat;package=net.tsalat.app;S.browser_fallback_url=${encodeURIComponent(back + "#install")};end`;
+
+  $app.innerHTML = `
+    <section class="hero">${c.image ? `<div class="photo" style="background-image:url('${esc(c.image)}')"></div>` : ""}
+      <div class="brand">${TS.logo(34)}<b>TSALAT</b> · توقيت الصّلاة</div>
+      ${c.name ? `<h1 class="mosque">${esc(c.name)}</h1><div class="city">${esc(c.cityAr || c.city)}</div>` : `<h1 class="mosque">توقيت الصّلاة</h1>`}
+      <div class="welcome">مواقيت مسجدنا على هاتفك</div>
+      <div class="welcome fr" style="font-size:.95rem">Les horaires de notre mosquée sur votre téléphone</div>
+      ${strip}
+    </section>
+
+    <div style="text-align:center;margin-top:14px"><span class="android">🤖 <span>أندرويد فقط · <span class="fr">Android uniquement</span></span></span></div>
+    <div class="cta">
+      <a class="btn" id="dl" href="${esc(apk)}">⬇ تحميل التطبيق<span class="fr">Télécharger l'application</span></a>
+      <div class="ver">${ver ? `الإصدار ${ltr(esc(ver))} · ` : ""}أندرويد ${ltr("6+")} · مجاني<br><span class="fr">${ver ? `Version ${esc(ver)} · ` : ""}Android 6+ · Gratuit</span></div>
+      <div class="ok" id="ok">✓ عند فتح التطبيق لأوّل مرّة سيظهر مسجدنا مباشرة.<br><span class="fr" style="font-size:.85rem">À la première ouverture, l'application affichera directement notre mosquée.</span></div>
+    </div>
+
+    <div class="card" id="install">
+      <h3>طريقة التثبيت · <span class="fr">Installation</span></h3>
+      <ol class="steps">
+        <li>اضغط «تحميل التطبيق» وانتظر انتهاء التحميل.<span class="fr">Touchez « Télécharger » et attendez la fin.</span></li>
+        <li>افتح الملف <b>tsalat.apk</b> من الإشعارات أو التنزيلات.<span class="fr">Ouvrez <b>tsalat.apk</b> (notification ou Téléchargements).</span></li>
+        <li>إن طُلب منك: اسمح بالتثبيت من هذا المصدر ثم «تثبيت».<span class="fr">Si demandé : autorisez cette source, puis « Installer ».</span></li>
+        <li>افتح التطبيق: ${c.name ? `<b>${esc(c.name)}</b>` : "مسجدنا"} جاهز.<span class="fr">Ouvrez l'application : notre mosquée est déjà choisie.</span></li>
+      </ol>
+    </div>
+
+    <a class="btn ghost" href="${esc(intentUrl)}">📲 التطبيق مثبّت؟ افتحه على هذا المسجد<br><span class="fr" style="font-size:.85rem">Déjà installée ? L'ouvrir sur cette mosquée</span></a>
+
+    <div class="feat">
+      <div><i>🔊</i><b>الأذان بالصوت</b><span class="fr">Azan sonore</span></div>
+      <div><i>⏳</i><b>العدّ التنازلي للإقامة</b><span class="fr">Compte à rebours iqama</span></div>
+      <div><i>🕌</i><b>صلاة الجمعة</b><span class="fr">Joumou'a</span></div>
+      <div><i>📢</i><b>إعلانات المسجد</b><span class="fr">Annonces de la mosquée</span></div>
+      <div><i>🧭</i><b>القبلة</b><span class="fr">Qibla</span></div>
+      <div><i>📱</i><b>ودجات الشاشة</b><span class="fr">Widgets</span></div>
+      <div><i>🎧</i><b>تلاوة القرآن</b><span class="fr">Coran audio</span></div>
+      <div><i>🌙</i><b>التاريخ الهجري</b><span class="fr">Date hégirienne</span></div>
+    </div>
+
+    <div class="card" style="text-align:center"><h3>📱 آيفون؟ · <span class="fr">iPhone ?</span></h3>
+      <p>نسخة الويب لمواقيت مسجدنا · <span class="fr">La version web des horaires</span></p>
+      <a class="btn ghost" href="../w/?id=${encodeURIComponent(id)}">فتح نسخة الويب · Ouvrir la version web</a></div>
+
+    <footer><div class="brand">${TS.logo(20)}<b>TSALAT</b></div>tsalat.net@gmail.com</footer>`;
+
+  // The download leaves the mosque in the clipboard: the app reads it once, at its first launch (MosqueLink.kt).
+  document.getElementById("dl").addEventListener("click", () => {
+    const text = "TSALAT:" + id;
+    const fallback = () => { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); } catch (e) {} t.remove(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).catch(fallback); else fallback();
+    document.getElementById("ok").classList.add("show");
+  });
+})();
+</script>
+</body>
+</html>

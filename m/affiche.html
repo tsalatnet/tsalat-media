@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Affiche TSALAT · ملصق</title>
+<link rel="icon" href="../w/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* A4 poster of a mosque: Android QR (big, the app opens on this mosque) above the iPhone QR (the web app).
+     ?id=<mosque_id>; without it, a generic poster (download page + mosque search). Print: A4, no margins. */
+  @page { size: A4; margin: 0; }
+  :root { --night:#12041a; --plum:#2c0c38; --violet:#4a1858; --gold:#C9A04E; --gold-l:#E2BF74; --ivory:#F4E8CC; --cream:#FBF6EC; --ink:#2a0f2e;
+          --fr: "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; background: #6d6470; }
+  body { font-family: Amiri, "Times New Roman", serif; color: var(--ink); }
+  .fr { font-family: var(--fr); direction: ltr; unicode-bidi: isolate; }
+  .bar { position: sticky; top: 0; z-index: 2; display: flex; gap: 10px; justify-content: center; align-items: center; padding: 10px; background: #1d1020; color: #eee; font-family: var(--fr); }
+  .bar input { width: 330px; padding: 7px 10px; border-radius: 8px; border: 1px solid #555; background: #2b1d30; color: #fff; }
+  .bar button { padding: 8px 16px; border-radius: 8px; border: 0; background: var(--gold-l); color: var(--ink); font-weight: 700; cursor: pointer; }
+  .page { position: relative; width: 210mm; height: 297mm; margin: 12mm auto; background: var(--cream); overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+  @media print { html, body { background: none; } .bar { display: none; } .page { margin: 0; box-shadow: none; } }
+
+  /* faint star pattern on the cream */
+  .page::before { content: ""; position: absolute; inset: 0; opacity: .06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%232c0c38' stroke-width='1.2'%3E%3Cpath d='M40 6l9.9 24.1L74 40l-24.1 9.9L40 74l-9.9-24.1L6 40l24.1-9.9z'/%3E%3Crect x='20' y='20' width='40' height='40' transform='rotate(45 40 40)'/%3E%3Crect x='20' y='20' width='40' height='40'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 22mm 22mm; }
+  .page > * { position: relative; }
+
+  /* header: night band ending in an arch */
+  .head { height: 90mm; color: var(--ivory); text-align: center; padding-top: 6mm;
+    background: linear-gradient(180deg, transparent 72%, var(--night) 100%), radial-gradient(ellipse 70% 90% at 50% 20%, var(--violet) 0%, var(--plum) 55%, var(--night) 100%); }
+  .head::before { content: ""; position: absolute; inset: 0; opacity: .12;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23E2BF74' stroke-width='1.2'%3E%3Cpath d='M40 6l9.9 24.1L74 40l-24.1 9.9L40 74l-9.9-24.1L6 40l24.1-9.9z'/%3E%3Crect x='20' y='20' width='40' height='40' transform='rotate(45 40 40)'/%3E%3Crect x='20' y='20' width='40' height='40'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 22mm 22mm; }
+  .head > * { position: relative; }
+  .arch { position: absolute; left: 0; right: 0; top: calc(90mm - 1px); width: 210mm; height: 14mm; }
+  /* the logo inside the prayer-card frame of the app's 7 day themes (frame_card_filled, leather tinted plum) */
+  .plate { width: 40mm; height: 49.4mm; margin: 0 auto; background: url("../w/frame.webp") center / 100% 100% no-repeat;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; filter: drop-shadow(0 1.2mm 2.5mm rgba(0,0,0,.55)); }
+  .plate svg { width: 19mm; height: 19mm; margin-top: 1mm; }
+  .plate .lat { font-weight: 700; color: var(--gold-l); font-size: 8.4mm; letter-spacing: .1em; line-height: 1; margin-top: 1.5mm; padding-left: .1em; }
+  .plate .rule { width: 22mm; height: .35mm; margin: 1.6mm 0 .4mm; background: linear-gradient(90deg, transparent, var(--gold-l), transparent); }
+  .plate .ar { color: var(--ivory); font-size: 5.6mm; line-height: 1.35; direction: rtl; }
+  .mosque { margin: 3.5mm 12mm 0; font-size: 12.5mm; line-height: 1.15; color: #fff; font-weight: 700; text-shadow: 0 1mm 3mm rgba(0,0,0,.5); }
+  .mosque.long { font-size: 10mm; }
+  .city { font-size: 6mm; color: var(--gold-l); margin-top: 1mm; }
+
+  .lead { text-align: center; margin: 15mm 14mm 0; }
+  .lead .ar { font-size: 8.4mm; font-weight: 700; color: var(--plum); line-height: 1.3; }
+  .lead .fr { display: block; font-size: 4.3mm; color: #6b5470; margin-top: 1mm; }
+
+  /* QR cards */
+  .card { margin: 0 14mm; border-radius: 6mm; background: #fff; border: .7mm solid var(--gold); display: flex; align-items: center; gap: 7mm; direction: ltr; }
+  .card .txt { flex: 1; direction: rtl; text-align: right; }
+  .qr { position: relative; flex: none; }
+  .qr svg { display: block; width: 100%; height: 100%; }
+  .qr .mid { position: absolute; display: flex; align-items: center; justify-content: center; background: var(--plum); border-radius: 18%; }
+  .android { margin-top: 5mm; padding: 5mm 7mm; box-shadow: 0 1.5mm 5mm rgba(44,12,56,.15); }
+  .android .qr { width: 66mm; height: 66mm; }
+  .badge { display: inline-block; padding: 1.2mm 4mm; border-radius: 10mm; background: #1f8a4c; color: #fff; font-size: 6mm; font-weight: 700; line-height: 1.3; }
+  .badge .fr { font-size: 3.6mm; letter-spacing: .08em; font-weight: 700; }
+  .only { margin-top: 2mm; font-size: 4.6mm; color: #1f8a4c; font-weight: 700; }
+  .only .fr { font-size: 3.4mm; }
+  .scan { margin-top: 4mm; font-size: 6.4mm; font-weight: 700; color: var(--plum); line-height: 1.25; }
+  .scan .fr { display: block; font-size: 3.6mm; font-weight: 600; color: #6b5470; margin-top: .6mm; }
+  .points { list-style: none; padding: 0; margin: 4mm 0 0; }
+  .points li { font-size: 4.9mm; line-height: 1.25; margin: 2mm 0; padding-right: 7mm; position: relative; }
+  .points li::before { content: "✦"; position: absolute; right: 0; color: var(--gold); }
+  .points .fr { display: block; font-size: 3.2mm; color: #6b5470; }
+
+  .iphone { margin-top: 5mm; padding: 4mm 7mm; }
+  .iphone .qr { width: 38mm; height: 38mm; }
+  .badge.ios { background: #333; }
+  .iphone .scan { font-size: 5.4mm; margin-top: 2.5mm; }
+  .iphone .scan .one { white-space: nowrap; }
+
+  /* footer band */
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; height: 24mm; color: var(--ivory);
+    background: linear-gradient(180deg, var(--plum), var(--night)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2mm; }
+  .icons { display: flex; gap: 7mm; font-size: 4.6mm; }
+  .icons span { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+  .icons i { font-style: normal; font-size: 6mm; }
+  .icons .fr { font-size: 2.8mm; color: var(--gold-l); }
+  .url { font-family: var(--fr); font-size: 3mm; color: #b9a6bf; direction: ltr; }
+  .free { position: absolute; top: -9mm; left: 50%; transform: translateX(-50%); background: var(--gold-l); color: var(--ink);
+    padding: 1.6mm 7mm; border-radius: 10mm; font-weight: 700; font-size: 5mm; white-space: nowrap; box-shadow: 0 1mm 3mm rgba(0,0,0,.25); }
+  .free .fr { font-size: 3.6mm; }
+</style>
+</head>
+<body>
+<div class="bar"><input id="mid" placeholder="mosque_id (ex. tn.ksibet-el-mediouni.youssef)"><button id="go">↻</button><button onclick="print()">🖨 طباعة · Imprimer</button></div>
+<div class="page" id="page"></div>
+<script src="../w/qrcode.js?v=1"></script>
+<script src="../w/core.js?v=1"></script>
+<script>
+"use strict";
+(async () => {
+  const { esc } = TS;
+  const id = TS.validId((window.TSALAT_POSTER || {}).id || new URLSearchParams(location.search).get("id"));
+  document.getElementById("mid").value = id || "";
+  document.getElementById("go").onclick = () => { const v = document.getElementById("mid").value.trim(); location.search = v ? "?id=" + encodeURIComponent(v) : ""; };
+
+  let c = null;
+  // In the app (PosterPrinter.kt, offline copy in the APK assets): the mosque is given, no network call.
+  const given = window.TSALAT_POSTER;
+  if (given) c = { name: given.name || "", cityAr: given.city || "", city: "" };
+  else if (id) { try { c = (await TS.load(id)).cfg; } catch (e) { c = { name: "", cityAr: "", city: "" }; } }
+  const androidUrl = id ? TS.androidUrl(id) : TS.SITE, iphoneUrl = id ? TS.iphoneUrl(id) : TS.SITE + "w/";
+  if (c && c.name) document.title = "Affiche · " + c.name;
+
+  function qr(url, mm, withLogo) {
+    const q = TS.qrSvg(url, { level: withLogo ? "H" : "M", hole: withLogo ? 0.24 : 0, dark: "#1a0820" });
+    const cell = mm / q.size;
+    const mid = withLogo ? `<div class="mid" style="left:${q.h0 * cell + cell * .6}mm;top:${q.h0 * cell + cell * .6}mm;width:${q.hw * cell - cell * 1.2}mm;height:${q.hw * cell - cell * 1.2}mm">${TS.logo(Math.round((q.hw * cell) * 3.2))}</div>` : "";
+    return `<div class="qr">${q.svg}${mid}</div>`;
+  }
+  const name = c && c.name ? c.name : "";
+  const arch = `<svg class="arch" viewBox="0 0 210 14" preserveAspectRatio="none"><path d="M0,0 H210 C150,0 125,13 105,13 C85,13 60,0 0,0 Z" fill="#12041a"/><path d="M0,0.3 C60,0.3 85,13.3 105,13.3 C125,13.3 150,0.3 210,0.3" fill="none" stroke="#E2BF74" stroke-width=".7"/></svg>`;
+
+  document.getElementById("page").innerHTML = `
+    <section class="head">
+      <div class="plate">${TS.logo(100)}<div class="lat">TSALAT</div><div class="rule"></div><div class="ar">توقيت الصّلاة</div></div>
+      ${name ? `<div class="mosque${name.length > 26 ? " long" : ""}">${esc(name)}</div><div class="city">${esc(c.cityAr || c.city)}</div>`
+             : `<div class="mosque">مواقيت الصلاة لمسجدك</div><div class="city fr">Les horaires de votre mosquée</div>`}
+      ${arch}
+    </section>
+
+    <div class="lead"><div class="ar">${name ? "مواقيت الأذان والإقامة لمسجدنا… على هاتفك" : "مواقيت الأذان والإقامة… على هاتفك"}</div>
+      <span class="fr">${name ? "Les horaires d'azan et d'iqama de notre mosquée… sur votre téléphone" : "Les horaires d'azan et d'iqama… sur votre téléphone"}</span></div>
+
+    <div class="card android">
+      ${qr(androidUrl, 66, true)}
+      <div class="txt">
+        <span class="badge">أندرويد · <span class="fr">ANDROID</span></span>
+        <div class="only">لهواتف أندرويد · <span class="fr">Pour Android</span></div>
+        <div class="scan">امسح الرمز بكاميرا هاتفك<span class="fr">Scannez avec l'appareil photo</span></div>
+        <ul class="points">
+          ${name ? `<li>يفتح التطبيق مباشرة على مسجدنا<span class="fr">S'ouvre directement sur notre mosquée</span></li>` : `<li>اختر مسجدك من القائمة<span class="fr">Choisissez votre mosquée</span></li>`}
+          <li>الأذان بالصوت وتنبيه الإقامة<span class="fr">Azan sonore et alerte d'iqama</span></li>
+          <li>إعلانات المسجد والجمعة<span class="fr">Annonces et Joumou'a</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card iphone">
+      ${qr(iphoneUrl, 38, false)}
+      <div class="txt">
+        <span class="badge ios">آيفون · <span class="fr">iPHONE</span></span>
+        <div class="scan">نسخة الويب لمواقيت ${name ? "مسجدنا" : "مسجدك"}<span class="fr one">${name ? "horaires de notre mosquée" : "horaires de votre mosquée"} via Safari ⟶ « Sur l'écran d'accueil »</span></div>
+      </div>
+    </div>
+
+    <section class="foot">
+      <div class="icons">
+        <span><i>🔊</i>الأذان<span class="fr">Azan</span></span>
+        <span><i>⏳</i>الإقامة<span class="fr">Iqama</span></span>
+        <span><i>🕌</i>الجمعة<span class="fr">Joumou'a</span></span>
+        <span><i>🧭</i>القبلة<span class="fr">Qibla</span></span>
+        <span><i>🌙</i>التاريخ الهجري<span class="fr">Date hégirienne</span></span>
+        <span><i>🎧</i>تلاوة القرآن<span class="fr">Coran audio</span></span>
+      </div>
+    </section>`;
+
+  // In the app (admin menu «ملصق المسجد للطباعة», PosterPrinter.kt): print once fonts and the frame are drawn.
+  if (window.TsalatPoster) {
+    const frame = new Promise(ok => { const i = new Image(); i.onload = i.onerror = ok; i.src = "../w/frame.webp"; });
+    await Promise.all([document.fonts.ready, frame]);
+    setTimeout(() => TsalatPoster.ready(), 400);
+  }
+})();
+</script>
+</body>
+</html>

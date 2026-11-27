@@ -1,0 +1,87 @@
+:root {
+  --night: #12041a; --plum: #2c0c38; --violet: #4a1858; --gold: #E2BF74; --gold2: #f4d999; --ivory: #F4E8CC;
+  --text: #efe6d4; --dim: #b3a28b; --card: rgba(255, 255, 255, .06); --line: rgba(226, 191, 116, .22);
+  --fr: "Segoe UI", -apple-system, "Helvetica Neue", Tahoma, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--night); }
+body {
+  margin: 0; min-height: 100vh; color: var(--text); font-family: Amiri, "Times New Roman", serif; line-height: 1.5;
+  background: radial-gradient(ellipse 90% 60% at 50% 0%, var(--violet) 0%, var(--plum) 45%, var(--night) 100%) fixed;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+/* soft Islamic star pattern behind everything */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23E2BF74' stroke-width='1.2'%3E%3Cpath d='M40 6l9.9 24.1L74 40l-24.1 9.9L40 74l-9.9-24.1L6 40l24.1-9.9z'/%3E%3Crect x='20' y='20' width='40' height='40' transform='rotate(45 40 40)'/%3E%3Crect x='20' y='20' width='40' height='40'/%3E%3C/g%3E%3C/svg%3E");
+}
+main { position: relative; max-width: 560px; margin: 0 auto; padding: 0 14px 40px; }
+.fr { font-family: var(--fr); direction: ltr; }
+.ltr { direction: ltr; unicode-bidi: isolate; }
+button { font: inherit; color: inherit; }
+
+/* hero */
+.hero { position: relative; margin: 0 -14px; padding: 18px 18px 22px; text-align: center; overflow: hidden; border-radius: 0 0 28px 28px; }
+.hero .photo { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: .55; }
+.hero .photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,4,26,.35) 0%, rgba(18,4,26,.55) 55%, var(--plum) 100%); }
+.hero > * { position: relative; }
+.brand { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--gold); font-size: 1rem; letter-spacing: .12em; }
+.brand b { font-weight: 700; }
+.mosque { margin: 10px 0 0; color: var(--gold2); font-size: 2.1rem; line-height: 1.25; text-shadow: 0 3px 12px rgba(0,0,0,.6); }
+.city { color: var(--ivory); font-size: 1.15rem; opacity: .9; }
+.dates { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: 1.1rem; color: var(--ivory); }
+.dates .fr { font-size: .85rem; color: var(--dim); width: 100%; }
+.clock { margin-top: 6px; font-family: var(--fr); font-weight: 300; font-size: 3.4rem; letter-spacing: .04em; color: #fff; direction: ltr; line-height: 1.1; }
+.clock small { font-size: 1.4rem; color: var(--gold); margin-left: 4px; }
+
+/* next prayer */
+.next { margin: 14px 0; padding: 16px; border-radius: 22px; text-align: center;
+  background: linear-gradient(135deg, rgba(226,191,116,.22), rgba(226,191,116,.06)); border: 1px solid var(--line); }
+.next .label { color: var(--dim); font-size: 1rem; }
+.next .what { font-size: 1.7rem; color: var(--gold2); }
+.next .count { font-family: var(--fr); font-size: 2.6rem; font-weight: 600; direction: ltr; color: #fff; line-height: 1.15; }
+.next.iqama { background: linear-gradient(135deg, rgba(120,200,150,.25), rgba(120,200,150,.06)); border-color: rgba(140,220,170,.35); }
+
+/* times table */
+.day-tabs { display: flex; gap: 8px; justify-content: center; margin: 6px 0 10px; }
+.day-tabs button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 16px; font-size: 1.05rem; color: var(--dim); cursor: pointer; }
+.day-tabs button.on { background: var(--gold); color: #2a0f2e; border-color: var(--gold); font-weight: 700; }
+.times { background: var(--card); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+.times .head, .times .row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; align-items: center; padding: 10px 16px; }
+.times .head { color: var(--dim); font-size: .95rem; border-bottom: 1px solid var(--line); }
+.times .head span:not(:first-child), .times .row .t { text-align: center; }
+.times .row + .row { border-top: 1px solid rgba(255,255,255,.06); }
+.times .name { font-size: 1.35rem; color: var(--ivory); line-height: 1.2; }
+.times .name .fr { display: block; font-size: .78rem; color: var(--dim); text-align: right; }
+.times .t { font-family: var(--fr); font-size: 1.35rem; font-weight: 600; direction: ltr; color: #fff; }
+.times .t.iq { color: var(--gold2); }
+.times .t small { display: block; font-size: .72rem; font-weight: 400; color: var(--dim); }
+.times .row.sun .name, .times .row.sun .t { opacity: .7; font-size: 1.1rem; }
+.times .row.cur { background: linear-gradient(90deg, rgba(226,191,116,.28), rgba(226,191,116,.08)); }
+.times .row.cur .name { color: var(--gold2); }
+.times .row.past { opacity: .55; }
+
+/* cards & banners */
+.card { margin: 14px 0; padding: 14px 16px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); }
+.card h3 { margin: 0 0 6px; color: var(--gold); font-size: 1.2rem; }
+.card p { margin: 4px 0; }
+.share-ico { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: -.2em; }
+.btn { display: block; width: 100%; text-align: center; background: var(--gold); color: #2a0f2e; font-weight: 700; font-size: 1.2rem;
+  padding: 12px; border-radius: 16px; text-decoration: none; border: 0; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--gold); border: 1px solid var(--line); }
+.links { display: flex; gap: 10px; margin-top: 16px; }
+.links > * { flex: 1; }
+footer { text-align: center; color: var(--dim); font-size: .85rem; margin-top: 22px; }
+footer .brand { font-size: .9rem; margin-bottom: 4px; }
+
+/* search */
+.search { width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: rgba(0,0,0,.25);
+  color: #fff; font-size: 1.15rem; font-family: inherit; outline: none; }
+.search:focus { border-color: var(--gold); }
+.hits { margin-top: 10px; }
+.hit { display: block; width: 100%; text-align: right; padding: 12px 14px; margin: 8px 0; border-radius: 16px; background: var(--card);
+  border: 1px solid var(--line); color: var(--ivory); font-size: 1.2rem; text-decoration: none; cursor: pointer; }
+.hit small { display: block; color: var(--dim); font-size: .9rem; }
+.msg { text-align: center; color: var(--dim); padding: 30px 10px; font-size: 1.1rem; }
+.spinner { width: 42px; height: 42px; margin: 60px auto 10px; border: 3px solid var(--line); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

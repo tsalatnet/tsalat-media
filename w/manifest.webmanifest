@@ -1,0 +1,16 @@
+{
+  "name": "توقيت الصّلاة · TSALAT",
+  "short_name": "TSALAT",
+  "description": "مواقيت الأذان والإقامة لمسجدك · Horaires d'azan et d'iqama de votre mosquée",
+  "lang": "ar",
+  "dir": "rtl",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12041a",
+  "theme_color": "#2c0c38",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
